@@ -31,6 +31,7 @@ class Database {
             // 3. set off emulasi prepared statements
             $this->conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+            // set fix data type in array
             $this->conn->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
 
         } catch(PDOException $exception) {

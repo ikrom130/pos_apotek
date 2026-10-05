@@ -1,14 +1,18 @@
 <?php 
 
-header("Content-Type: application/json: charset=UTF-8");
+// set header
+header("Content-Type: application/json; charset=UTF-8");
 
+// set only GET Method
 header("Access-Control-Allow-Methods: GET");
 
 require_once '../config/database.php';
 
+// connect ro database
 $database = new Database();
 $db = $database->getConnection();
 
+// get action
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $id = isset($_GET['id']) ? $_GET['id'] : '';
 
