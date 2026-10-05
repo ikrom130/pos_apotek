@@ -31,6 +31,8 @@ class Database {
             // 3. set off emulasi prepared statements
             $this->conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+            $this->conn->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
+
         } catch(PDOException $exception) {
             die("Connection failed: " . $exception->getMessage());
         }
