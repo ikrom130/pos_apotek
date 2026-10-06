@@ -34,7 +34,7 @@ if ($action == "search" && !empty($id)) {
             http_response_code(200); // respon
             echo json_encode([
                 "status" => "success",
-                "message" => "Product found",
+                "message" => "Product ditemukan",
                 "data" => $product
             ]);
         } else {
@@ -42,7 +42,7 @@ if ($action == "search" && !empty($id)) {
             http_response_code(404); // product not found
             echo json_encode([
                 "status" => "error",
-                "message" => "Product not found in database"
+                "message" => "Product tidak ditemukan di database"
             ]);
         }
 
@@ -51,7 +51,7 @@ if ($action == "search" && !empty($id)) {
         http_response_code(500); // server error / not connected
         echo json_encode([
             "status" => "error",
-            "message" => "Internal server error"
+            "message" => "Server error"
         ]);
     }
 
@@ -60,6 +60,6 @@ if ($action == "search" && !empty($id)) {
     http_response_code(400); // bad request
     echo json_encode([
         "status" => "error",
-        "Message" => "Invalid request parameters. Ensure action=search and id=[barcode_number]."
+        "Message" => "Paramater request tidak valid. pastikan action=search dan product_id=barcode"
     ]);
 }
