@@ -16,7 +16,7 @@ if ($action = "checkout") {
     $json_input = file_get_contents("php://input");
     $data = json_decode($json_input, true);
 
-    if (empty($data) || !isset($data['selling_no']) || !isset($data['employee_id']) || !isset($data['cart_items'])) {
+    if (empty($data) || !isset($data['employee_id']) || !isset($data['cart_items'])) {
         http_response_code(400);
         echo json_encode([
             "status" => "error",
@@ -36,8 +36,8 @@ if ($action = "checkout") {
         
         $db->beginTransaction();
 
-        $query_selling = "INSERT INTO selling (selling_no, employee_id, total_selling, cash_amount, change_amount, status_selling) 
-                          VALUES (?,?,?,?, 'success')";
+        $query_selling = "INSERT INTO selling (selling_no, employee_id, total_selling, cash_amount, change_amount, selling_status) 
+                          VALUES (?,?,?,?,?, 'success')";
 
         $stmt_selling = $db->prepare($query_selling);
         $stmt_selling->execute([$selling_no, $employee_id, $total_selling, $cash_amount, $change_amount]);
@@ -49,8 +49,8 @@ if ($action = "checkout") {
                                WHERE batch_id = ?";
         $stmt_update_batch = $db->prepare($query_update_batch);
 
-        $query_update_product = "UPDATE p.products 
-                                 JOIN b.stock_batch on p.product_id = b.proudct_id 
+        $query_update_product = "UPDATE products p 
+                                 JOIN stock_batches b on p.product_id = b.product_id 
                                  SET p.product_stock = p.product_stock - ? 
                                  WHERE b.batch_id = ?";
         $stmt_update_product = $db->prepare($query_update_product);
