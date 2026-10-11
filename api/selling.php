@@ -31,10 +31,30 @@ if ($action = "checkout") {
     $cash_amount = $data['cash_amount'];
     $change_amount = $cash_amount - $total_selling;
     $cart_items = $data['cart_items'];
+    $prescription_id = null;
     
     try {
         
         $db->beginTransaction();
+
+        if (!empty($data['prescription'])) {
+            $presc = $data['prescription'];
+            
+            // Validasi input resep
+            if (!empty($presc['patient_name']) && !empty($presc['doctor_name'])) {
+                $prescription_id = "RSP" . date("ymd") . "-" . rand(1000, 9999); // Buat ID resep otomatis maks 15 karakter
+                $patient_name = $presc['patient_name'];
+                $doctor_name = $presc['doctor_name'];
+                $doctor_license_no = isset($presc['doctor_license_no']) ? $presc['doctor_license_no'] : null;
+                $prescription_date = isset($presc['prescription_date']) ? $presc['prescription_date'] : date("Y-m-d");
+
+                // Perintah INSERT ke tabel prescriptions terlebih dahulu
+                $query_presc = "INSERT INTO prescriptions (prescription_id, patient_name, doctor_name, doctor_license_no, prescription_date) 
+                                VALUES (?, ?, ?, ?, ?)";
+                $stmt_presc = $db->prepare($query_presc);
+                $stmt_presc->execute([$prescription_id, $patient_name, $doctor_name, $doctor_license_no, $prescription_date]);
+            }
+        }
 
         $query_selling = "INSERT INTO selling (selling_no, employee_id, total_selling, cash_amount, change_amount, selling_status) 
                           VALUES (?,?,?,?,?, 'success')";
