@@ -1,1 +1,68 @@
 @import "tailwindcss";
+
+/* ATURAN BARU TAILWIND V4 UNTUK TOGGLE DARK MODE MANUAL */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Konfigurasi tema dari tailwind.config sebelumnya */
+  --color-brand-default: #010694;
+  --color-brand-50: #eff0ff;
+  --color-brand-100: #e0e2ff;
+  --color-brand-200: #c3c7ff;
+  --color-brand-300: #9aa0ff;
+  --color-brand-400: #6d70fc;
+  --color-brand-500: #4346ef;
+  --color-brand-600: #2b2bd1;
+  --color-brand-700: #2220aa;
+  --color-brand-800: #1e1c89;
+  --color-brand-900: #010694;
+
+  --color-dark-bg: #0b0f19;
+  --color-dark-card: #111623;
+  --color-dark-border: #1e2536;
+
+  --font-size-xxs: 0.65rem;
+}
+
+/* Base Styles */
+body {
+  font-family: "Inter", sans-serif;
+}
+
+/* Utilities / Component Styles kustom */
+.glass-effect {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.sidebar-transition {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* Custom Checkbox */
+.custom-checkbox:checked {
+  background-color: var(--color-brand-default);
+  border-color: var(--color-brand-default);
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://w3.org d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+}
