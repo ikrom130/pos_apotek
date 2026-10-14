@@ -33,16 +33,6 @@ if (empty($data)) {
     exit();
 }
 
-$id_product = $data['id_product'];
-$name = $data['product_name'];
-$form = $data['product_form'];
-$unit_dose = $data['product_unit_does'];
-$purchase_price = $data['product_purchase_price'];
-$selling_price = $data['product_selling_price'];
-$stock = $data['product_stock'];
-$min_stock = $data["min_stock_product"];
-$type = $data["product_type"];
-
 try {
     $kolomTabel = [];
     $placeholders = [];
