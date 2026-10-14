@@ -10,11 +10,13 @@ require_once '../config/database.php';
 $database = new Database();
 $db = $database->getConnection();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+$action = isset($_GET['action']) ? $_GET['action'] : '';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || $action !== 'add_product') {
     http_response_code(405);
     echo json_encode([
         "status" => "error",
-        "message" => "access not allowed"
+        "message" => "Method request tidak diizinkan"
     ]);
     exit();
 }
