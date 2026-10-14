@@ -5,21 +5,21 @@
 
 @theme {
   /* Konfigurasi tema dari tailwind.config sebelumnya */
-  --color-brand-default: #010694;
-  --color-brand-50: #eff0ff;
-  --color-brand-100: #e0e2ff;
-  --color-brand-200: #c3c7ff;
-  --color-brand-300: #9aa0ff;
-  --color-brand-400: #6d70fc;
-  --color-brand-500: #4346ef;
-  --color-brand-600: #2b2bd1;
-  --color-brand-700: #2220aa;
-  --color-brand-800: #1e1c89;
-  --color-brand-900: #010694;
+  --color-brand-default: #069401;
+  --color-brand-50: #efffef;
+  --color-brand-100: #e4ffe0;
+  --color-brand-200: #c3ffc3;
+  --color-brand-300: #9dff9a;
+  --color-brand-400: #7efc6d;
+  --color-brand-500: #51ef43;
+  --color-brand-600: #2bd133;
+  --color-brand-700: #20aa20;
+  --color-brand-800: #1c8925;
+  --color-brand-900: #019406;
 
   --color-dark-bg: #0b0f19;
-  --color-dark-card: #111623;
-  --color-dark-border: #1e2536;
+  --color-dark-card: #132311;
+  --color-dark-border: #1e3628;
 
   --font-size-xxs: 0.65rem;
 }

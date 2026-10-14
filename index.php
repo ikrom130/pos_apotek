@@ -12,9 +12,9 @@ include 'views/header.php'; ?>
                 <iconify-icon icon="solar:hamburger-menu-linear" width="24" stroke-width="1.5"></iconify-icon>
             </button>
             <!-- Search -->
-            <div class="hidden md:flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5 ring-1 ring-slate-200 focus-within:ring-brand-500 dark:bg-dark-card dark:ring-dark-border">
-                <iconify-icon icon="solar:magnifer-linear" class="text-slate-400"></iconify-icon>
-                <input type="text" placeholder="Search analytics..." class="w-64 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white">
+            <div class="hidden md:flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5 ring-1 ring-slate-600 focus-within:ring-brand-500 dark:bg-dark-card dark:ring-dark-border">
+                <iconify-icon icon="solar:magnifer-linear" class="text-slate-600"></iconify-icon>
+                <input type="text" placeholder="Search analytics..." class="w-64 bg-transparent text-sm text-slate-900 placeholder:text-slate-600 focus:outline-none dark:text-white">
                 <div class="flex items-center gap-1 rounded border border-slate-200 px-1.5 py-0.5 dark:border-dark-border">
                     <span class="text-xs text-slate-400">⌘K</span>
                 </div>
