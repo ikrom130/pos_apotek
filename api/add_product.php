@@ -44,17 +44,23 @@ $min_stock = $data["min_stock_product"];
 $type = $data["product_type"];
 
 try {
-    $query_add = "INSERT INTO products (product_id, product_name, product_form, product_unit_dose, product_purchase_price, product_selling_price, product_stock, min_stock_product, product_type) VALUES (?,?,?,?,?,?,?,?,?)";
+    $kolomTabel = [];
+    $placeholders = [];
+    $bindings = [];
+
+    foreach ($data as $kolom => $nilai) {
+        
+        $kolomBersih = preg_replace('/[^a-zA-Z0-9_]/', '', $kolom);
+        
+        $kolomTabel[] = $kolomBersih;
+        $placeholders[] = ":" . $kolomBersih;
+        $bindings[":" . $kolomBersih] = $nilai;
+    }
+
+    $query_add = "INSERT INTO products (" . implode(", ", $kolomTabel) . ") VALUES (" . implode(", ", $placeholders) . ")";
+
     $stmt_add = $db->prepare($query_add);
-    $stmt_add->execute([
-        $id_product, 
-        $name, $form, 
-        $unit_dose, 
-        $purchase_price, 
-        $selling_price, 
-        $stock, 
-        $min_stock, 
-        $type]);
+    $stmt_add->execute($bindings);
 
     http_response_code(201);
     echo json_encode([
