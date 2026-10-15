@@ -69,7 +69,7 @@ try {
         exit();
     }
       
-    http_response_code(201);
+    http_response_code(200);
     echo json_encode([
         "status" => "success",
         "message" => "Data produk " . $data['product_name'] . " berhasil diubah"
