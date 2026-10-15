@@ -52,6 +52,15 @@ try {
     $stmt_add = $db->prepare($query_add);
     $stmt_add->execute($bindings);
 
+    if ($stmt_add->rowCount() === 0) {
+        http_response_code(404); // 404 Not Found / Not Modified
+        echo json_encode([
+            "status" => "error",
+            "message" => "Data produk gagal ditambahkan atau data tidak lengkap!."
+        ]);
+        exit();
+    }
+
     http_response_code(201);
     echo json_encode([
         "status" => "success",
@@ -62,6 +71,6 @@ try {
     http_response_code(500);
     echo json_encode([
         "status" => "error",
-        "message" => "Gagal menyimpan data"
+        "message" => "Server error"
     ]);
 }

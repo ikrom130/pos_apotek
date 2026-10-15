@@ -12,7 +12,7 @@ $db = $database->getConnection();
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
-if ($_REQUEST['REQUEST_METHOD'] !== 'POST' || $action === 'checkout') {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || $action === 'checkout') {
 
     // Membaca data JSON mentah yang dikirim oleh JavaScript Vanilla
     $json_input = file_get_contents("php://input");
