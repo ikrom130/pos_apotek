@@ -16,6 +16,15 @@ $db = $database->getConnection();
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $id = isset($_GET['id']) ? $_GET['id'] : '';
 
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode([
+        "status" => "error",
+        "message" => "request method tidak diizinkan"
+    ]);
+    exit();
+}
+
 if ($action == "search" && !empty($id)) {
     
     try {
