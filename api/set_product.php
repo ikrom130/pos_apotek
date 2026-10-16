@@ -24,9 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'PUT' || $action !== 'set_product') {
 $json_input = file_get_contents("php://input");
 $data = json_decode($json_input, true);
 $id = $data['product_id'] ?? '';
-unset($data['product_id']);
 
-if (empty($id)) {
+if (empty($data) || empty($id)) {
     http_response_code(400);
     echo json_encode([
         "status" => "error",
@@ -35,36 +34,37 @@ if (empty($id)) {
     exit();
 }
 
-if (empty($data)) {
-    http_response_code(400);
-    echo json_encode([
-        "status" => "error",
-        "message" => "format tidak valid atau data kosong!"
-    ]);
-    exit();
-}
-
 try {
-    $setFields = [];
-    $bindings = [":id" => $id];
 
-    foreach ($data as $key => $value) {
-        $kolomBersih = preg_replace('/[^a-zA-Z0-9_]/', '', $key);
-
-        $setFields[] = "$kolomBersih = :$kolomBersih";
-        $bindings[":$kolomBersih"] = $value; 
-    }
-
-    $query_set = "UPDATE products SET " . implode(", " , $setFields) . " WHERE product_id = :id"; 
+    $query_set = "UPDATE products SET 
+                  product_name = :name, 
+                  product_form = :form, 
+                  product_unit_dose = :unit, 
+                  product_purchase_price = :purchase_price, 
+                  product_selling_price = :selling_price, 
+                  product_stock = :stock, 
+                  min_stock_product = :min_stock, 
+                  product_type = :type  WHERE product_id = :id";
+    $params = [
+    'name' => $data['product_name'] ?? null,
+    'form' => $data['product_form'] ?? null,
+    'unit' => $data['product_unit_dose'] ?? null,
+    'purchase_price' => $data['product_purchase_price'] ?? 0,
+    'selling_price' => $data['product_selling_price'] ?? 0,
+    'stock' => $data['product_stock'] ?? 0,
+    'min_stock' => $data['min_stock_product'] ?? 0,
+    'type' => $data['product_type'] ?? null,
+    'id' => $id
+    ];  
 
     $stmt_set = $db->prepare($query_set);
-    $stmt_set->execute($bindings);
+    $stmt_set->execute($params);
 
     if ($stmt_set->rowCount() === 0) {
-        http_response_code(404); // 404 Not Found / Not Modified
+        http_response_code(200);
         echo json_encode([
-            "status" => "error",
-            "message" => "Data produk gagal diubah. ID tidak ditemukan atau tidak ada perubahan data."
+            "status" => "success",
+            "message" => "Tidak ada perubahan data produk atau ID tidak ditemukan."
         ]);
         exit();
     }
@@ -72,13 +72,13 @@ try {
     http_response_code(200);
     echo json_encode([
         "status" => "success",
-        "message" => "Data produk " . $data['product_name'] . " berhasil diubah"
+        "message" => "Data produk " . htmlspecialchars($data['product_name'] ?? '') . " berhasil diubah"
     ]);
 
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         "status" => "error",
-        "message" => "Server error"
+        "message" => "Server error: " . $e->getMessage()
     ]);
 }
