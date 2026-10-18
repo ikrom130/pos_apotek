@@ -9,9 +9,9 @@ require_once '../config/database.php';
 $database = new Database();
 $db = $database->getConnection();
 
-$action = isset($_GET['action']) ?? '';
+$action = ($_GET['action']) ?? '';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $action !== 'add_supplier') {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || $action !== 'add_supplier') {
     http_response_code(405);
     echo json_encode([
         "status" => "error",
@@ -37,15 +37,15 @@ try {
     $bindings = [
         "id" => $data['supplier_id'] ?? '',
         "name" => $data['supplier_name'] ?? '',
-        "address" => $data['supplier_id'],
-        "officer_phone" => $data['officer_phone'],
-        "officer_name" => $data['officer_name'],
+        "address" => $data['supplier_address'] ?? '',
+        "officer_phone" => $data['officer_phone'] ?? '',
+        "officer_name" => $data['officer_name'] ?? '',
     ];
 
     $stmt_add = $db->prepare($query_add);
     $stmt_add->execute($bindings);
 
-    if ($stmt_add->rowCount() > 0) {
+    if ($stmt_add->rowCount() === 0) {
         http_response_code(400);
         echo json_encode([
             "status" => "error",
@@ -58,7 +58,7 @@ try {
     echo json_encode([
         "status" => "success",
         "message" => "data berhasil ditambahkan",
-        "data" => $data['id']
+        "data" => $data['supplier_id']
     ]);
 
 } catch (Exception $e) {
