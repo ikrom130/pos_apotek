@@ -6,8 +6,7 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 require_once '../config/database.php';
 
-$database = new Database();
-$db = $database->getConnection();
+$db = (new Database())->getConnection();
 
 $action = $_GET['action'] ?? '';
 
@@ -39,7 +38,7 @@ try {
     $stmt_supp = $db->prepare($query_supp);
     $stmt_supp->execute($params);
 
-    $supplier = $stmt_supp->fetchAll();
+    $supplier = $stmt_supp->fetchAll(PDO::FETCH_ASSOC);
 
     if (count($supplier) > 0) {
         http_response_code(200);
@@ -56,10 +55,16 @@ try {
         ]);
     }
 
+} catch (PDOException $e) { 
+    http_response_code(500);
+    echo json_encode([
+        "status" => "error",
+        "message" => "Database error: " . $e->getMessage()
+    ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         "status" => "error",
-        "message" => "internal server error: " . $e->getMessage()
+        "message" => "Server error: " . $e->getMessage()
     ]);
 }
