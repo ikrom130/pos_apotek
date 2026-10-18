@@ -33,12 +33,12 @@ if (empty($data)) {
 }
 
 try {
-    $query_add = "INSERT INTO suppliers (supplier_id, supplier_name, supplier_address, officer_phone, officer_name) VALUES (:id, :name, :address, :officer_phone, :officer_name)";
+    $query_add = "INSERT INTO suppliers (supplier_id, supplier_name, supplier_address, supplier_phone, officer_name) VALUES (:id, :name, :address, :officer_phone, :officer_name)";
     $bindings = [
         "id" => $data['supplier_id'] ?? '',
         "name" => $data['supplier_name'] ?? '',
         "address" => $data['supplier_address'] ?? '',
-        "officer_phone" => $data['officer_phone'] ?? '',
+        "officer_phone" => $data['supplier_phone'] ?? '',
         "officer_name" => $data['officer_name'] ?? '',
     ];
 
