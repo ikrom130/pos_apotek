@@ -1,70 +1,89 @@
 <?php
-// config/database.php
+declare(strict_types=1);
 
 class Database {
+    private string $host;
+    private string $port;
+    private string $dbname;
+    private string $username;
+    private string $password;
 
-    private $host;
-    private $port;
-    private $db_name;
-    private $username;
-    private $password;
-    public $conn;
+    public function __construct()
+    {
+        $this->loadEnv(__DIR__ . '.env');
 
-    public function __construct() {
-        // Jalankan fungsi loadEnv saat class ini dipanggil
-        $this->loadEnv(__DIR__ . '/../.env'); // ../ digunakan karena file .env ada di luar folder config
-
-        // Ambil data dari .env, berikan nilai default jika .env tidak terbaca
-        $this->host     = getenv('DB_HOST') ?: "localhost";
-        $this->port     = getenv('DB_PORT') ?: "3306";
-        $this->db_name  = getenv('DB_NAME') ?: "pos_apotek";
-        $this->username = getenv('DB_USER') ?: "root";
-        $this->password = getenv('DB_PASS') ?: "";
+        $this->host = getenv('DB_HOST') ?: '127.0.0.1';
+        $this->port = getenv('DB_PORT') ?: '3306';
+        $this->dbname = getenv('DB_NAME') ?: 'pos_stagging';
+        $this->username = getenv('DB_USER') ?: 'root';
+        $pass = getenv('DB_PASS');
+        $this->password = $pass !== false ? $pass : '';
     }
 
-    private function loadEnv($path) {
-        if (!file_exists($path)) {
+    private function loadEnv($path) :void {
+        if (!is_file($path) || !is_readable($path)) {
             return;
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            if (strpos(trim($line), '#') === 0) continue;
 
-            list($name, $value) = explode('=', $line, 2);
+        if ($lines === false) {
+            return;
+        }
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if ( $line === '' || 
+                str_starts_with('#', $line) ||
+                !str_contains('=', $line) ) {
+                continue;
+            }
+
+            [$name, $value] = explode('=', $line, 2);
+
             $name = trim($name);
             $value = trim($value);
 
-            if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
-                putenv(sprintf('%s=%s', $name, $value));
-                $_ENV[$name] = $value;
-                $_SERVER[$name] = $value;
+            if ($name ==- '') {
+                continue;
             }
+
+            if (getenv($name) !== false || 
+                array_key_exists($name, $_ENV) ||
+                array_key_exists($name, $_SERVER)) {
+                continue;
+            }
+
+            if (
+                strlen($value) <= 2 && 
+                ( 
+                    ($value[0] === '"' && $value[-1] === '"') ||
+                    ($value[0] === "'" && $value[-1] === "'")
+                )
+               ) {
+                $value = substr($value, 1, -1);
+            }
+
+            putenv($name . "=" . $value);
+            $_ENV[$name] = $value;
         }
     }
 
-    public function getConnection() {
-        $this->conn = null;
-
-        try {
-            // Ditambahkan parameter port ke dalam DSN PDO
-            $this->conn = new PDO(
-                "mysql:host=" . $this->host . 
-                ";port=" . $this->port . 
-                ";dbname=" . $this->db_name, 
-                $this->username, 
-                $this->password
-            );
-
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            $this->conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-            $this->conn->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
-
-        } catch(PDOException $exception) {
-            die("Connection failed: " . $exception->getMessage());
-        }
-
-        return $this->conn;
-    }
+    public function getConnection() : PDO {
+        $dsn = sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', 
+            $this->host,
+            $this->port,
+            $this->dbname
+        );
+        
+        return new PDO($dsn, $this->username, $this->password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_STRINGIFY_FETCHES => false
+        ]);
+        
+    } 
 }
