@@ -45,10 +45,12 @@ class Database {
             }
 
             if (getenv($name) !== false) {
+                putenv($name . '=' . (string) $_ENV[$name]);
                 continue;
             }
 
             if (array_key_exists($name, $_ENV)) {
+                putenv($name . '=' . (string) $_SERVER[$name]);
                 continue;
             }
 
