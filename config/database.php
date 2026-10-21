@@ -1,26 +1,26 @@
 <?php
+
 declare(strict_types=1);
 
 class Database {
     private string $host;
     private string $port;
-    private string $dbname;
+    private string $dbName;
     private string $username;
     private string $password;
 
     public function __construct()
     {
-        $this->loadEnv(__DIR__ . '.env');
+        $this->loadEnv(dirname(__DIR__) . '/env');
 
         $this->host = getenv('DB_HOST') ?: '127.0.0.1';
-        $this->port = getenv('DB_PORT') ?: '3306';
-        $this->dbname = getenv('DB_NAME') ?: 'pos_stagging';
-        $this->username = getenv('DB_USER') ?: 'root';
-        $pass = getenv('DB_PASS');
-        $this->password = $pass !== false ? $pass : '';
+        $this->port = getenv('DB_PORT') ?: '127.0.0.1';
+        $this->dbName = getenv('DB_NAME') ?: '127.0.0.1';
+        $this->username = getenv('DB_USER') ?: '127.0.0.1';
+        $this->password = getenv('DB_PASS') ?: '127.0.0.1';
     }
 
-    private function loadEnv($path) :void {
+    private function loadEnv(string $path) : void {
         if (!is_file($path) || !is_readable($path)) {
             return;
         }
@@ -34,35 +34,35 @@ class Database {
         foreach ($lines as $line) {
             $line = trim($line);
 
-            if ( $line === '' || 
-                str_starts_with('#', $line) ||
-                !str_contains('=', $line) ) {
-                continue;
+            if ($line === false) {
+                return;
             }
 
             [$name, $value] = explode('=', $line, 2);
-
-            $name = trim($name);
-            $value = trim($value);
-
-            if ($name ==- '') {
+            
+            if ($name === '' || str_starts_with($name, '#') || !str_contains($name, '=')) {
                 continue;
             }
 
-            if (getenv($name) !== false || 
-                array_key_exists($name, $_ENV) ||
-                array_key_exists($name, $_SERVER)) {
+            if (getenv($name) !== false) {
                 continue;
             }
 
-            if (
-                strlen($value) <= 2 && 
-                ( 
-                    ($value[0] === '"' && $value[-1] === '"') ||
-                    ($value[0] === "'" && $value[-1] === "'")
+            if (array_key_exists($name, $_ENV)) {
+                continue;
+            }
+
+            if (array_key_exists($name, $_SERVER)) {
+                continue;
+            }
+
+            if (strlen($value) >= 2 &&
+                (
+                    ($value[0] !== "'" && $value[-1] !== "'") ||
+                    ($value[0] !== '"' && $value[-1] !== '"')
                 )
                ) {
-                $value = substr($value, 1, -1);
+                $value = substr($value,1,-1);
             }
 
             putenv($name . "=" . $value);
@@ -72,18 +72,19 @@ class Database {
 
     public function getConnection() : PDO {
         $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', 
+            'mysql:host=%s;port=%s;dbname=%s',
             $this->host,
             $this->port,
-            $this->dbname
+            $this->dbName
         );
-        
-        return new PDO($dsn, $this->username, $this->password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::ATTR_STRINGIFY_FETCHES => false
-        ]);
-        
-    } 
+
+        return new PDO($dsn, $this->username, $this->password, 
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_STRINGIFY_FETCHES => false
+            ]
+        );
+    }
 }
