@@ -21,24 +21,46 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET' || $action !== 'get_products') {
 
 $search = $_GET['search'] ?? '';
 
-$query_products = "SELECT product_id, 
-                   product_name, 
-                   product_form, 
-                   product_unit_dose, 
-                   product_purchase_price, 
-                   product_selling_price, 
-                   product_stock, 
-                   min_stock_product, 
-                   product_type FROM products";
+
+$query_products = "
+    SELECT
+        p.product_id,
+        p.product_name,
+        pf.form_name AS product_form,
+        p.product_type,
+        p.product_group,
+        COALESCE(stock.total_stock, 0) AS total_stock,
+        p.min_stock_product
+    FROM products AS p
+
+    LEFT JOIN product_forms AS pf
+        ON pf.form_id = p.form_id
+
+    LEFT JOIN (
+        SELECT
+            product_id,
+            SUM(batch_stock) AS total_stock
+        FROM stock_batches
+        GROUP BY product_id
+    ) AS stock
+        ON stock.product_id = p.product_id
+";
+
 $params = [];
 
 if ($search !== '') {
-    $query_products .= " WHERE product_id LIKE :search 
-                     OR product_name LIKE :search";
-    $params['search'] = "%" . $search . "%"; 
+    $query_products .= "
+        WHERE p.product_id LIKE :search_id
+           OR p.product_name LIKE :search_name
+    ";
+
+    $search_value = '%' . $search . '%';
+
+    $params['search_id'] = $search_value;
+    $params['search_name'] = $search_value;
 }
 
-$query_products .= " ORDER BY product_name ASC";
+$query_products .= " ORDER BY p.product_name ASC";
 
 try {
 

@@ -11,16 +11,18 @@ class Database {
 
     public function __construct()
     {
-        $this->loadEnv(dirname(__DIR__) . '/env');
+        $this->loadEnv(dirname(__DIR__) . '/.env');
 
         $this->host = getenv('DB_HOST') ?: '127.0.0.1';
-        $this->port = getenv('DB_PORT') ?: '127.0.0.1';
-        $this->dbName = getenv('DB_NAME') ?: '127.0.0.1';
-        $this->username = getenv('DB_USER') ?: '127.0.0.1';
-        $this->password = getenv('DB_PASS') ?: '127.0.0.1';
+        $this->port = getenv('DB_PORT') ?: '3306';
+        $this->dbName = getenv('DB_NAME') ?: 'pos_stagging';
+        $this->username = getenv('DB_USER') ?: 'root';
+        $pass = getenv('DB_PASS');
+        $this->password = $pass !== false ? $pass : '';
     }
-
-    private function loadEnv(string $path) : void {
+   
+    private function loadEnv(string $path): void
+    {
         if (!is_file($path) || !is_readable($path)) {
             return;
         }
@@ -34,43 +36,52 @@ class Database {
         foreach ($lines as $line) {
             $line = trim($line);
 
-            if ($line === false) {
-                return;
+            if (
+                $line === '' ||
+                str_starts_with($line, '#') ||
+                !str_contains($line, '=')
+            ) {
+                continue;
             }
 
             [$name, $value] = explode('=', $line, 2);
-            
-            if ($name === '' || str_starts_with($name, '#') || !str_contains($name, '=')) {
+
+            $name = trim($name);
+            $value = trim($value);
+
+            if ($name === '') {
                 continue;
             }
 
             if (getenv($name) !== false) {
-                putenv($name . '=' . (string) $_ENV[$name]);
                 continue;
             }
 
             if (array_key_exists($name, $_ENV)) {
-                putenv($name . '=' . (string) $_SERVER[$name]);
+                putenv($name . '=' . (string) $_ENV[$name]);
                 continue;
             }
 
             if (array_key_exists($name, $_SERVER)) {
+                putenv($name . '=' . (string) $_SERVER[$name]);
                 continue;
             }
 
-            if (strlen($value) >= 2 &&
+            if (
+                strlen($value) >= 2 &&
                 (
-                    ($value[0] !== "'" && $value[-1] !== "'") ||
-                    ($value[0] !== '"' && $value[-1] !== '"')
+                    ($value[0] === '"' && $value[-1] === '"') ||
+                    ($value[0] === "'" && $value[-1] === "'")
                 )
-               ) {
-                $value = substr($value,1,-1);
+            ) {
+                $value = substr($value, 1, -1);
             }
 
-            putenv($name . "=" . $value);
+            putenv($name . '=' . $value);
             $_ENV[$name] = $value;
         }
     }
+
 
     public function getConnection() : PDO {
         $dsn = sprintf(

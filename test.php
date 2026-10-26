@@ -1,21 +1,22 @@
+
 <?php
-declare(strict_types=1);
 
 require_once __DIR__ . '/config/database.php';
 
-try {
-    $database = new Database();
-    $pdo = $database->getConnection();
+new Database();
 
-    $stmt = $pdo->query(
-        'SELECT DATABASE() AS database_name, VERSION() AS mysql_version'
-    );
+$variables = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER'];
 
-    $result = $stmt->fetch();
-
-    echo "Koneksi berhasil.\n";
-    echo "Database: " . $result['database_name'] . "\n";
-    echo "MySQL: " . $result['mysql_version'] . "\n";
-} catch (PDOException $exception) {
-    echo "Koneksi gagal: " . $exception->getMessage() . "\n";
+foreach ($variables as $name) {
+    echo $name . ': '
+        . (getenv($name) !== false ? 'TERBACA' : 'TIDAK TERBACA')
+        . PHP_EOL;
 }
+
+$password = getenv('DB_PASS');
+
+echo 'DB_PASS: '
+    . ($password !== false && $password !== ''
+        ? 'TERSEDIA'
+        : 'KOSONG ATAU TIDAK TERBACA')
+    . PHP_EOL;
