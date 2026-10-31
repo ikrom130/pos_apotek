@@ -52,18 +52,20 @@ function authReadJson(): array
     return $data;
 }
 
-function authrequireCsrf(): void
+function authRequireCsrf(): void
 {
     global $authConfig;
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $cookieToken = $_COOKIE['csrf_token'];
-    $headerToken = $_SERVER['HTTP-X-CSRF-TOKEN'] ?? '';
+    $cookieToken = $_COOKIE['csrf_token'] ?? '';
+    $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 
     if (
         !is_string($origin) || !hash_equals($authConfig['app_origin'], $origin) ||
-        !is_string($cookieToken) || 
+        !is_string($cookieToken) || $cookieToken === '' ||
+        !is_string($headerToken) || $headerToken === '' ||
+        !hash_equals($cookieToken, $headerToken)
     ) {
-        # code...
+        authJson(403, ['status' => 'error', 'message' => 'Permintaan tidak lolos pemeriksaan keamanan.']);
     }
 }
 
