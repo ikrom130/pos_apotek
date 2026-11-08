@@ -57,7 +57,7 @@ if ($accessTtl < 60 || $accessTtl > 900) {
     throw new RuntimeException('JWT_ACCESS_TTL harus 60-900 detik.');
 }
 if ($refreshTtl < 300 || $refreshTtl > 604800) {
-    throw new RuntimeException('JWT_REFRES_TTL HARUS 300-604800 detik.');
+    throw new RuntimeException('JWT_REFRESH_TTL HARUS 300-604800 detik.');
 }
 if ($sessionTtl < $refreshTtl || $sessionTtl > 2592000) {
     throw new RuntimeException('AUTH_SESSION_TTL harus setidaknya selama refresh token dan maksimal 30 hari.');
