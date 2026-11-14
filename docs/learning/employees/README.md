@@ -10,7 +10,7 @@ Role yang dipakai sekarang `admin` dan `staff`, sesuai data SQL. Pegawai dinonak
 
 ## Peta file referensi ke project
 
-Salin isi folder `api/employees/` ke `D:\Project\PHP\pos_apotek\api\employees\`:
+Salin isi folder `api/employees/` ke `\pos_apotek\api\employees\`:
 
 | File referensi   | Lokasi di project              | Peran                                         |
 | ---------------- | ------------------------------ | --------------------------------------------- |

@@ -4,7 +4,7 @@
 
 ## Proyek saat ini
 
-Source project berada di `D:\project\PHP\pos_apotek`. Folder tersebut sudah berisi aplikasi PHP dan dokumentasi, jadi rencana ini berlaku untuk mengembangkan proyek yang ada, bukan memulai proyek kosong.
+Source project berada di `\pos_apotek`. Folder tersebut sudah berisi aplikasi PHP dan dokumentasi, jadi rencana ini berlaku untuk mengembangkan proyek yang ada, bukan memulai proyek kosong.
 
 Struktur yang terlihat:
 

@@ -46,8 +46,8 @@ Contoh nama variabel `.env` saja (isi rahasia tetap lokal):
 
 ```dotenv
 APP_ORIGIN=https://<domain-herd-anda>
-JWT_PRIVATE_KEY_PATH=D:/Project/PHP/secrets/pos_apotek/jwt-private.pem
-JWT_PUBLIC_KEY_PATH=D:/Project/PHP/secrets/pos_apotek/jwt-public.pem
+JWT_PRIVATE_KEY_PATH=D:/Project/PHP/secrets/pos_apotek/private_key.pem
+JWT_PUBLIC_KEY_PATH=D:/Project/PHP/secrets/pos_apotek/private_public.pem
 JWT_ISSUER=https://<domain-herd-anda>
 JWT_AUDIENCE=https://<domain-herd-anda>
 JWT_ACCESS_TTL=300
