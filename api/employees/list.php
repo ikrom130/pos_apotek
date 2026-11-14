@@ -8,9 +8,13 @@ employeeRequireMethod('GET');
 
 try {
     $page = filter_var(employeeQueryValue('page', '1'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
+    if ($page === false) {
+        authJson(422, ['status' => 'error', 'message' => 'Page harus berupa angka antara 1 sampai 1000000.']);
+    }
+
     $limit = filter_var(employeeQueryValue('limit', '20'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
     if ($page === false || $limit === false) {
-        authJson(422, ['status' => 'error', 'message' => 'page minimal 1 dan limit harus 1–100.']);
+        authJson(422, ['status' => 'error', 'message' => 'Limit harus berupa angka antara 1 sampai 100.']);
     }
 
     $where = [];
