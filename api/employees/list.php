@@ -13,7 +13,8 @@ try {
     }
 
     $limit = filter_var(employeeQueryValue('limit', '20'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
-    if ($page === false || $limit === false) {
+
+    if ($limit === false) {
         authJson(422, ['status' => 'error', 'message' => 'Limit harus berupa angka antara 1 sampai 100.']);
     }
 
