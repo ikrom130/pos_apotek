@@ -9,7 +9,7 @@ authRequireCsrf();
 $input = authReadJson();
 
 $profile = employeeReadProfile($input);
-$password = is_string($input['password'] ?? null) ? $input['password'] : '';
+$password = is_string($input['employee_password'] ?? null) ? $input['employee_password'] : '';
 if (strlen($password) < 12 || strlen($password) > 72) {
     authJson(422, ['status' => 'error', 'message' => 'Sandi awal harus 12–72 byte.']);
 }
