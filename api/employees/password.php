@@ -42,13 +42,12 @@ try {
     $update = $employeeDb->prepare('UPDATE employees SET employee_password = ? WHERE employee_id = ?');
     $update->execute([password_hash($newPassword, PASSWORD_DEFAULT), $id]);
     
-    $revoke = $employeeDb->prepare(
-        "UPDATE auth_sessions
-         SET revoked_at = UTC_TIMESTAMP(6), revoked_reason = 'password_changed'
-         WHERE employee_id = ? AND revoked_at IS NULL"
-    );
-    $revoke->execute([$id]);
-    
+    $stmtSessions = $employeeDb->prepare('SELECT session_id FROM auth_sessions WHERE employee_id = ? AND revoked_at IS NULL');
+    $stmtSessions->execute([$id]);
+    while ($activeSessionId = $stmtSessions->fetchColumn()) {
+        authRevokeSession($employeeDb, (string)$activeSessionId, 'password_changed');
+    }
+
     $employeeDb->commit();
 
     employeeClearPasswordChangeFailures($employeeDb, $usernameIpHash, $ipHash);
