@@ -65,6 +65,7 @@ AUTH_DUMMY_PASSWORD_HASH=<hasil-perintah-kedua>
 | File referensi            | Salin/terapkan pada proyek                                                    |
 | ------------------------- | ----------------------------------------------------------------------------- |
 | `auth_login_attempts.sql` | Jalankan manual pada database target; jangan otomatis dari PHP                |
+| `auth_password_attempts.sql` | Jalankan manual bila menerapkan endpoint ubah sandi sendiri dari paket master pegawai |
 | `config-auth.php`         | Ganti/merge ke `config/auth.php`                                              |
 | `auth-bootstrap.php`      | `auth/bootstrap.php`                                                          |
 | `auth-csrf-token.php`     | `auth/csrf-token.php`                                                         |
