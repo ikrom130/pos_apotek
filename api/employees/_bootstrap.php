@@ -10,9 +10,6 @@ if (!defined('EMPLOYEE_API_ENTRY')) {
 require_once dirname(__DIR__, 2) . '/auth/bootstrap.php';
 
 $employeeActor = authRequireEmployee();
-if ($employeeActor['employee_role'] !== 'admin') {
-    authJson(403, ['status' => 'error', 'message' => 'Akses admin diperlukan.']);
-}
 $employeeDb = $authDb;
 
 define('API_INTERNAL_INCLUDE', true);
@@ -24,6 +21,52 @@ function employeeRequireMethod(string $method): void
         header('Allow: ' . $method);
         authJson(405, ['status' => 'error', 'message' => 'Metode request tidak diizinkan.']);
     }
+}
+
+function employeeRequireAdmin(): void
+{
+    global $employeeActor;
+    if ($employeeActor['employee_role'] !== 'admin') {
+        authJson(403, ['status' => 'error', 'message' => 'Akses admin diperlukan.']);
+    }
+}
+
+function employeePasswordChangeIsLimited(PDO $db, string $usernameIpHash, string $ipHash): bool
+{
+    $user = $db->prepare(
+        'SELECT COUNT(*) FROM auth_password_attempts
+         WHERE username_ip_hash = ?
+           AND attempted_at >= UTC_TIMESTAMP(6) - INTERVAL 15 MINUTE'
+    );
+    $user->execute([$usernameIpHash]);
+    $userCount = (int) $user->fetchColumn();
+
+    $ip = $db->prepare(
+        'SELECT COUNT(*) FROM auth_password_attempts
+         WHERE ip_hash = ?
+           AND attempted_at >= UTC_TIMESTAMP(6) - INTERVAL 15 MINUTE'
+    );
+    $ip->execute([$ipHash]);
+    $ipCount = (int) $ip->fetchColumn();
+
+    return $userCount >= 5 || $ipCount >= 30;
+}
+
+function employeeRecordPasswordChangeFailure(PDO $db, string $usernameIpHash, string $ipHash): void
+{
+    $stmt = $db->prepare(
+        'INSERT INTO auth_password_attempts (username_ip_hash, ip_hash, attempted_at)
+         VALUES (?, ?, UTC_TIMESTAMP(6))'
+    );
+    $stmt->execute([$usernameIpHash, $ipHash]);
+}
+
+function employeeClearPasswordChangeFailures(PDO $db, string $usernameIpHash, string $ipHash): void
+{
+    $stmt = $db->prepare(
+        'DELETE FROM auth_password_attempts WHERE username_ip_hash = ? AND ip_hash = ?'
+    );
+    $stmt->execute([$usernameIpHash, $ipHash]);
 }
 
 function employeeQueryValue(string $key, string $default = ''): string
