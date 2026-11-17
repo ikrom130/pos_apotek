@@ -6,6 +6,7 @@ define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
 employeeRequireMethod('PUT');
 authRequireCsrf();
+employeeRequireAdmin();
 $id = employeeRequireId();
 $profile = employeeReadProfile(authReadJson());
 
