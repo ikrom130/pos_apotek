@@ -27,7 +27,7 @@ if (strlen($newPassword) < 12 || strlen($newPassword) > 72) {
 try {
     $employeeDb->beginTransaction();
     $accountStmt = $employeeDb->prepare(
-        'SELECT employee_password, must_change_password
+        'SELECT employee_password
          FROM employees
          WHERE employee_id = ? AND is_active = 1
          FOR UPDATE'
