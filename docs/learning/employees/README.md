@@ -8,15 +8,15 @@ Tabel `employees` memakai `employee_id VARCHAR(15)`, bukan `AUTO_INCREMENT`. End
 
 Satu tabel counter dapat melayani keluarga ID berbeda. Berdasarkan pola di SQL target:
 
-| Tabel            | Contoh          | Sequence key           | Aturan              |
-| ---------------- | --------------- | ---------------------- | ------------------- |
-| `employees`      | `EMP-00004`     | `employee`             | Berurutan global    |
-| `suppliers`      | `SUP-00004`     | `supplier`             | Berurutan global    |
-| `products`       | `PRD-00009`     | `product`              | Berurutan global    |
-| `prescriptions`  | `RX-00006`      | `prescription`         | Berurutan global    |
-| `purchases`      | `PO-202611-001` | `purchase:202611`      | Berurutan per bulan |
+| Tabel | Contoh | Sequence key | Aturan |
+|---|---|---|---|
+| `employees` | `EMP-00004` | `employee` | Berurutan global |
+| `suppliers` | `SUP-00004` | `supplier` | Berurutan global |
+| `products` | `PRD-00009` | `product` | Berurutan global |
+| `prescriptions` | `RX-00006` | `prescription` | Berurutan global |
+| `purchases` | `PO-202611-001` | `purchase:202611` | Berurutan per bulan |
 | `goods_receipts` | `GR-202611-001` | `goods_receipt:202611` | Berurutan per bulan |
-| `sales`          | `SL-202611-01`  | `sale:202611`          | Berurutan per bulan |
+| `sales` | `SL-202611-01` | `sale:202611` | Berurutan per bulan |
 
 Counter satu baris dikunci dengan `SELECT ... FOR UPDATE` saat nomor dibaca dan dinaikkan, dalam transaksi yang sama dengan insert. InnoDB memakai locking read untuk pola baca-lalu-perbarui counter seperti ini.[MySQL: Locking Reads](https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html)
 
@@ -27,33 +27,32 @@ ID numerik lain seperti `category_id`, `dosage_form_id`, `product_unit_id`, `bat
 ## Peta file referensi ke project
 
 1. Jalankan `id_sequences.sql` satu kali pada database target setelah data awal diimpor.
-2. Jalankan `../referensi-login/auth_password_attempts.sql` satu kali untuk rate limit ubah sandi sendiri.
-3. Salin `api/_shared/id-sequence.php` ke `D:\Project\PHP\pos_apotek\api\_shared\id-sequence.php`.
-4. Salin isi folder `api/employees/` ke `D:\Project\PHP\pos_apotek\api\employees\`.
+2. Salin `api/_shared/id-sequence.php` ke `D:\Project\PHP\pos_apotek\api\_shared\id-sequence.php`.
+3. Salin isi folder `api/employees/` ke `D:\Project\PHP\pos_apotek\api\employees\`.
 
-| File referensi            | Lokasi di project              | Peran                                                       |
-| ------------------------- | ------------------------------ | ----------------------------------------------------------- |
-| `_shared/id-sequence.php` | `api/_shared/id-sequence.php`  | Allocator counter bersama untuk seluruh entitas             |
-| `_bootstrap.php`          | `api/employees/_bootstrap.php` | Muat autentikasi, helper admin/rate limit, validasi bersama |
-| `list.php`                | `api/employees/list.php`       | Daftar, filter, pagination                                  |
-| `detail.php`              | `api/employees/detail.php`     | Baca satu pegawai                                           |
-| `create.php`              | `api/employees/create.php`     | Buat pegawai, generate ID, hash sandi awal                  |
-| `update.php`              | `api/employees/update.php`     | Ubah profil, username, role                                 |
-| `status.php`              | `api/employees/status.php`     | Aktif/nonaktif dan cabut sesi                               |
-| `password.php`            | `api/employees/password.php`   | Ubah sandi akun sendiri dan cabut sesi                      |
+| File referensi | Lokasi di project | Peran |
+|---|---|---|
+| `_shared/id-sequence.php` | `api/_shared/id-sequence.php` | Allocator counter bersama untuk seluruh entitas |
+| `_bootstrap.php` | `api/employees/_bootstrap.php` | Muat autentikasi, cek admin, validasi bersama |
+| `list.php` | `api/employees/list.php` | Daftar, filter, pagination |
+| `detail.php` | `api/employees/detail.php` | Baca satu pegawai |
+| `create.php` | `api/employees/create.php` | Buat pegawai, generate ID, hash sandi awal |
+| `update.php` | `api/employees/update.php` | Ubah profil, username, role |
+| `status.php` | `api/employees/status.php` | Aktif/nonaktif dan cabut sesi |
+| `password.php` | `api/employees/password.php` | Ganti sandi dan cabut sesi |
 
 `_bootstrap.php` hanya boleh dimuat oleh endpoint dan memberi 404 jika dibuka langsung.
 
 ## Endpoint
 
-| Method dan URL                                                               | Tujuan                                              |
-| ---------------------------------------------------------------------------- | --------------------------------------------------- |
-| `GET /api/employees/list.php?page=1&limit=20&search=...&role=staff&active=1` | Daftar terfilter dan berpaginasi                    |
-| `GET /api/employees/detail.php?id=EMP-00002`                                 | Detail pegawai                                      |
-| `POST /api/employees/create.php`                                             | Membuat akun; server menetapkan ID                  |
-| `PUT /api/employees/update.php?id=EMP-00002`                                 | Mengganti profil, username, atau role               |
-| `PATCH /api/employees/status.php?id=EMP-00002`                               | Mengaktifkan/menonaktifkan                          |
-| `POST /api/employees/password.php`                                           | Pegawai yang sedang login mengubah sandinya sendiri |
+| Method dan URL | Tujuan |
+|---|---|
+| `GET /api/employees/list.php?page=1&limit=20&search=...&role=staff&active=1` | Daftar terfilter dan berpaginasi |
+| `GET /api/employees/detail.php?id=EMP-00002` | Detail pegawai |
+| `POST /api/employees/create.php` | Membuat akun; server menetapkan ID |
+| `PUT /api/employees/update.php?id=EMP-00002` | Mengganti profil, username, atau role |
+| `PATCH /api/employees/status.php?id=EMP-00002` | Mengaktifkan/menonaktifkan |
+| `POST /api/employees/password.php?id=EMP-00002` | Mengganti sandi setelah konfirmasi sandi admin |
 
 Tidak ada endpoint `DELETE`. Gunakan status nonaktif agar relasi dan riwayat transaksi tetap utuh.
 
@@ -90,7 +89,7 @@ Respons `201` mengembalikan ID yang ditetapkan server, misalnya `EMP-00004`.
 { "is_active": false }
 ```
 
-`POST /api/employees/password.php` tidak menerima target ID. Pegawai hanya dapat mengganti sandi akun sesi aktifnya sendiri dengan mengonfirmasi sandi saat ini:
+`POST /api/employees/password.php?id=EMP-00004` meminta sandi admin saat ini:
 
 ```json
 {
@@ -99,62 +98,37 @@ Respons `201` mengembalikan ID yang ditetapkan server, misalnya `EMP-00004`.
 }
 ```
 
-Contoh pemanggilan vanilla JS untuk ubah sandi:
-
-```js
-const response = await fetch("/api/employees/password.php", {
-  method: "POST",
-  credentials: "same-origin",
-  headers: {
-    "Content-Type": "application/json",
-    "X-CSRF-Token": window.posCsrfToken,
-  },
-  body: JSON.stringify({ current_password, new_password }),
-});
-const result = await response.json();
-console.log(response.status, result.message);
-```
-
 ## Contoh vanilla JS
 
 Perubahan data memerlukan cookie sesi dan header CSRF. Jangan menyimpan access/refresh token di JavaScript atau `localStorage`.
 
 ```js
-const response = await fetch("/api/employees/list.php?page=1&limit=20", {
-  credentials: "same-origin",
+const response = await fetch('/api/employees/list.php?page=1&limit=20', {
+  credentials: 'same-origin'
 });
 const result = await response.json();
 console.log(result);
 
-const createResponse = await fetch("/api/employees/create.php", {
-  method: "POST",
-  credentials: "same-origin",
+const createResponse = await fetch('/api/employees/create.php', {
+  method: 'POST',
+  credentials: 'same-origin',
   headers: {
-    "Content-Type": "application/json",
-    "X-CSRF-Token": window.posCsrfToken,
+    'Content-Type': 'application/json',
+    'X-CSRF-Token': window.posCsrfToken
   },
   body: JSON.stringify({
-    employee_name: "Sari Putri",
-    employee_role: "staff",
-    employee_phone: "081234567890",
-    employee_username: "sari.putri",
-    password: "SandiAwalYangPanjang",
-  }),
+    employee_name: 'Sari Putri',
+    employee_role: 'staff',
+    employee_phone: '081234567890',
+    employee_username: 'sari.putri',
+    password: 'SandiAwalYangPanjang'
+  })
 });
 const created = await createResponse.json();
 console.log(createResponse.status, created.employee_id);
 ```
 
 `window.posCsrfToken` tersedia di tab yang menjalankan login. Setelah reload, minta token baru dari `/auth/csrf-token.php` sebelum mengubah data.
-
-Ubah sandi mengembalikan `requires_login: true`, mencabut seluruh sesi pegawai, dan membersihkan cookie browser. Setelah respons sukses, pegawai harus masuk kembali dengan sandi baru. Lima sandi saat ini yang salah per pegawai/IP atau 30 percobaan per IP dalam 15 menit memberi respons `429`; catatan menyimpan HMAC username/IP, bukan nilai aslinya.
-
-Hapus catatan lebih dari 30 hari secara berkala:
-
-```sql
-DELETE FROM auth_password_attempts
-WHERE attempted_at < UTC_TIMESTAMP(6) - INTERVAL 30 DAY;
-```
 
 ## Memakai allocator di entitas lain
 
@@ -180,15 +154,14 @@ Pastikan tanggal transaksi divalidasi di endpoint; sequence key dan prefix bulan
 2. Lanjut `detail.php`: pencarian satu baris dan respons 404.
 3. Ikuti `create.php`: transaksi, row lock, allocator ID, hash sandi, dan respons 201.
 4. Bandingkan `update.php` dan `status.php`: transaksi serta `SELECT ... FOR UPDATE` sebelum perubahan.
-5. Baca `password.php`: endpoint hanya mengubah sandi milik sesi aktif, memeriksa sandi saat ini, membatasi kegagalan, dan mencabut sesi.
+5. Baca `password.php`: konfirmasi sandi admin dan pencabutan sesi pegawai sasaran.
 6. Buka `_bootstrap.php` untuk cek autentikasi/role dan validasi pegawai, lalu `api/_shared/id-sequence.php` untuk allocator umum yang dapat dipakai endpoint supplier/produk/transaksi.
 
 ## Keputusan dan batas tahap ini
 
-- CRUD master pegawai memerlukan role admin dan CSRF. Ubah sandi sendiri memerlukan sesi pegawai aktif, sandi saat ini, dan CSRF.
+- Perubahan data wajib lolos autentikasi admin dan CSRF.
 - Sandi awal/baru dibatasi 12–72 byte agar sesuai endpoint login referensi saat ini.
 - Admin tidak dapat menonaktifkan akun atau menurunkan role admin miliknya sendiri.
-- Penonaktifan dan ubah sandi sendiri mencabut sesi pegawai dari `auth_sessions`.
-- Reset oleh admin untuk pegawai yang lupa sandi belum disediakan. Rancang sebagai alur pemulihan terpisah dengan sandi sementara/sekali pakai, wajib ganti pada login berikutnya, dan jejak audit sebelum menambahkannya.
+- Penonaktifan dan reset sandi mencabut sesi pegawai dari `auth_sessions`.
 - Belum ada audit trail perubahan pegawai karena skema target belum menyediakan tabel audit.
 - Kode mengikuti SQL target dan belum dijalankan terhadap database Anda.
