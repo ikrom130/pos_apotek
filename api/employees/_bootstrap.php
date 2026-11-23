@@ -7,42 +7,16 @@ if (!defined('EMPLOYEE_API_ENTRY')) {
     exit;
 }
 
-require_once dirname(__DIR__, 2) . '/auth/bootstrap.php';
+define('API_BOOTSTRAP_ENTRY', true);
+require_once dirname(__DIR__) . '/_shared/bootstrap.php';
 
-$employeeActor = authRequireEmployee();
-$employeeDb = $authDb;
+$employeeActor = $apiActor;
+$employeeDb = $apiDb;
 
-define('API_INTERNAL_INCLUDE', true);
-require_once dirname(__DIR__) . '/_shared/id-sequence.php';
-
-function employeeRequireMethod(string $method): void
-{
-    if (($_SERVER['REQUEST_METHOD'] ?? '') !== $method) {
-        header('Allow: ' . $method);
-        authJson(405, ['status' => 'error', 'message' => 'Metode request tidak diizinkan.']);
-    }
-}
-
-function employeeRequireAdmin(): void
-{
-    global $employeeActor;
-    if ($employeeActor['employee_role'] !== 'admin') {
-        authJson(403, ['status' => 'error', 'message' => 'Akses admin diperlukan.']);
-    }
-}
-
-function employeeQueryValue(string $key, string $default = ''): string
-{
-    $value = $_GET[$key] ?? $default;
-    if (!is_string($value)) {
-        authJson(422, ['status' => 'error', 'message' => "Parameter {$key} harus berupa teks."]);
-    }
-    return trim($value);
-}
 
 function employeeRequireId(): string
 {
-    $id = strtoupper(employeeQueryValue('id'));
+    $id = strtoupper(apiQueryValue('id'));
     if (preg_match('/\AEMP-[0-9]{5,11}\z/', $id) !== 1) {
         authJson(422, ['status' => 'error', 'message' => 'employee_id harus berformat EMP-00001.']);
     }
@@ -59,8 +33,8 @@ function employeeReadProfile(array $data): array
     if (preg_match('/\A[^\p{C}]{2,100}\z/u', $name) !== 1) {
         authJson(422, ['status' => 'error', 'message' => 'Nama pegawai wajib diisi, maksimal 100 karakter.']);
     }
-    if (!in_array($role, ['admin', 'staff'], true)) {
-        authJson(422, ['status' => 'error', 'message' => 'Role harus admin atau staff.']);
+    if (!in_array($role, ['admin', 'apoteker', 'kasir'], true)) {
+        authJson(422, ['status' => 'error', 'message' => 'Role harus admin, apoteker, atau kasir.']);
     }
     if ($phone !== '' && preg_match('/\A[0-9+(). -]{7,25}\z/', $phone) !== 1) {
         authJson(422, ['status' => 'error', 'message' => 'Nomor telepon tidak valid.']);
@@ -82,6 +56,6 @@ function employeeHandleDatabaseError(Throwable $error, string $context): never
     if ($error instanceof PDOException && $error->getCode() === '23000') {
         authJson(409, ['status' => 'error', 'message' => 'Username pegawai sudah digunakan.']);
     }
-    error_log($context . ': ' . $error->getMessage());
-    authJson(500, ['status' => 'error', 'message' => 'Terjadi kesalahan server.']);
+
+    apiHandleDatabaseError($error, $context);
 }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
-employeeRequireMethod('POST');
-employeeRequireAdmin();
 authRequireCsrf();
+apiRequireMethod('POST');
+apiRequireRole($apiActor, ['admin']);
 $input = authReadJson();
 
 $profile = employeeReadProfile($input);

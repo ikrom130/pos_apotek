@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
-employeeRequireMethod('PATCH');
-employeeRequireAdmin();
 authRequireCsrf();
+apiRequireMethod('PATCH');
+apiRequireRole($apiActor, ['admin']);
 $id = employeeRequireId();
 $input = authReadJson();
 $active = $input['is_active'] ?? null;
@@ -15,7 +15,7 @@ if (!in_array($active, [true, false, 0, 1], true)) {
     authJson(422, ['status' => 'error', 'message' => 'is_active harus boolean.']);
 }
 $active = (int) $active;
-if ($id === $employeeActor['employee_id'] && $active === 0) {
+f ($id === $apiActor['employee_id'] && $active === 0) {
     authJson(422, ['status' => 'error', 'message' => 'Anda tidak dapat menonaktifkan akun sendiri.']);
 }
 

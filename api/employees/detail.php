@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
-employeeRequireMethod('GET');
-employeeRequireAdmin();
+apiRequireMethod('GET');
+apiRequireRole($apiActor, ['admin']);
 $id = employeeRequireId();
 
 try {
