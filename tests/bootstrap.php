@@ -39,3 +39,4 @@ $GLOBALS['testDbConfig'] = [
 
 require_once dirname(__DIR__) . '/auth/bootstrap.php';
 require_once dirname(__DIR__) . '/auth/login-process.php';
+require_once dirname(__DIR__) . '/auth/refresh.php';
