@@ -41,3 +41,4 @@ require_once dirname(__DIR__) . '/auth/bootstrap.php';
 require_once dirname(__DIR__) . '/auth/login-process.php';
 require_once dirname(__DIR__) . '/auth/refresh.php';
 require_once dirname(__DIR__) . '/auth/logout.php';
+require_once dirname(__DIR__) . '/auth/me.php';
