@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
-employeeRequireMethod('GET');
-employeeRequireAdmin();
+apiRequireMethod('GET');
+apiRequireRole($apiActor, ['admin']);
 
 try {
-    $page = filter_var(employeeQueryValue('page', '1'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
+    $page = filter_var(apiQueryValue('page', '1'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
     if ($page === false) {
         authJson(422, ['status' => 'error', 'message' => 'Filter pagination page harus 1-1000000']);
     }
 
-    $limit = filter_var(employeeQueryValue('limit', '20'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+    $limit = filter_var(apiQueryValue('limit', '20'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
     if ($limit === false) {
         authJson(422, ['status' => 'error', 'message' => 'Filter pagination limit harus 1–100.']);
     }
 
     $where = [];
     $params = [];
-    $search = employeeQueryValue('search');
+    $search = apiQueryValue('search');
     if ($search !== '') {
         if (strlen($search) > 100) {
             authJson(422, ['status' => 'error', 'message' => 'search maksimal 100 karakter.']);
@@ -30,16 +30,16 @@ try {
         array_push($params, $needle, $needle, $needle);
     }
 
-    $role = strtolower(employeeQueryValue('role'));
+    $role = strtolower(apiQueryValue('role'));
     if ($role !== '') {
-        if (!in_array($role, ['admin', 'staff'], true)) {
-            authJson(422, ['status' => 'error', 'message' => 'Filter role tidak valid.']);
+        if (!in_array($role, ['admin', 'apoteker', 'kasir'], true)) {
+            authJson(422, ['status' => 'error', 'message' => 'Filter role harus admin, apoteker, atau kasir.']);
         }
         $where[] = 'employee_role = ?';
         $params[] = $role;
     }
 
-    $active = employeeQueryValue('active');
+    $active = apiQueryValue('active');
     if ($active !== '') {
         if (!in_array($active, ['0', '1'], true)) {
             authJson(422, ['status' => 'error', 'message' => 'Filter active harus 0 atau 1.']);

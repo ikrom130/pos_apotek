@@ -5,11 +5,11 @@ declare(strict_types=1);
 define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
 authRequireCsrf();
-employeeRequireAdmin();
-employeeRequireMethod('POST');
+apiRequireRole($apiActor, ['admin']);
+apiRequireMethod('POST');
 
 $targetId = employeeRequireId();
-$actorId = $employeeActor['employee_id'];
+$actorId = $apiActor['employee_id'];
 
 if (hash_equals($actorId, $targetId)) {
     authJson(422, [

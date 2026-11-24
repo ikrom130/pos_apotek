@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="true" stopOnFailure="false">
+    <testsuites>
+        <testsuite name="Auth Test Suite">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <php>
+        <env name="DB_TEST_HOST" value="127.0.0.1"/>
+        <env name="DB_TEST_NAME" value="test_pos_apotek_target"/>
+        <env name="DB_TEST_USER" value="root"/>
+        <env name="DB_TEST_PASS" value="plplpl123"/>
+    </php>
+</phpunit>

@@ -1,0 +1,5 @@
+# Paksa composer.lock tetap LF
+composer.lock eol=lf
+
+# Opsional: konsistenkan line ending file kode/teks
+* text=auto eol=lf

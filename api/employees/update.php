@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 define('EMPLOYEE_API_ENTRY', true);
 require_once __DIR__ . '/_bootstrap.php';
-employeeRequireMethod('PUT');
 authRequireCsrf();
-employeeRequireAdmin();
+apiRequireMethod('PUT');
+apiRequireRole($apiActor, ['admin']);
 $id = employeeRequireId();
 $profile = employeeReadProfile(authReadJson());
 
@@ -18,7 +18,7 @@ try {
         $employeeDb->rollBack();
         authJson(404, ['status' => 'error', 'message' => 'Pegawai tidak ditemukan.']);
     }
-    if ($id === $employeeActor['employee_id'] && $profile['employee_role'] !== 'admin') {
+    if ($id === $apiActor['employee_id'] && $profile['employee_role'] !== 'admin') {
         $employeeDb->rollBack();
         authJson(422, ['status' => 'error', 'message' => 'Anda tidak dapat menurunkan role admin sendiri.']);
     }

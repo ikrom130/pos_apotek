@@ -1,0 +1,3 @@
+<?php
+
+php -r '$cnf = tempnam(sys_get_temp_dir(), "ssl"); file_put_contents($cnf, "[ req ]\ndistinguished_name = req_distinguished_name\n[ req_distinguished_name ]\n"); $res = openssl_pkey_new(["config" => $cnf, "digest_alg" => "sha256", "private_key_bits" => 2048, "private_key_type" => OPENSSL_KEYTYPE_RSA]); @unlink($cnf); if ($res === false) { fwrite(STDERR, openssl_error_string() . PHP_EOL); exit(1); } openssl_pkey_export($res, $priv); file_put_contents("tests/fixtures/jwt_test_private.pem", $priv); file_put_contents("tests/fixtures/jwt_test_public.pem", openssl_pkey_get_details($res)["key"]); echo "OK\n";'
