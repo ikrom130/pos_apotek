@@ -1,2 +1,6 @@
 .env
 node_modules/
+tests/fixtures/*.pem
+tests/fixtures/*.key
+vendor/
+.phpunit.result.cache

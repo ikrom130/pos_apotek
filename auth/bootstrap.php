@@ -5,15 +5,31 @@ declare(strict_types=1);
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-require_once dirname(__DIR__) . '/vendor/autoload.php';
-require_once dirname(__DIR__) . '/config/database.php';
+class AuthResponseException extends RuntimeException
+{
+    public function __construct(
+        public readonly int $statusCode,
+        public readonly array $payload
+    ) {
+        parent::__construct($payload['message'] ?? 'Auth Response', $statusCode);
+    }
+}
 
-$authDatabase = new Database();
-$authDb = $authDatabase->getConnection();
-$authConfig = require dirname(__DIR__) . '/config/auth.php';
+if (!defined('APP_TESTING')) {
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
+    require_once dirname(__DIR__) . '/config/database.php';
+
+    $authDatabase = new Database();
+    $authDb = $authDatabase->getConnection();
+    $authConfig = require dirname(__DIR__) . '/config/auth.php';
+}
 
 function authJson(int $status, array $payload): never
 {
+    if (defined('APP_TESTING') && APP_TESTING === true) {
+        throw new AuthResponseException($status, $payload);
+    }
+
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, private');
@@ -33,15 +49,17 @@ function authRequireMethod(string $method): void
     }
 }
 
-function authReadJson(): array
+function authReadJson(?string $rawInput = null): array
 {
     $contentType = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
     if ($contentType !== 'application/json') {
         authJson(415, ['status' => 'error', 'message' => 'Content-Type harus application/json.']);
     }
 
+    $body = $rawInput ?? (string) file_get_contents('php://input');
+
     try {
-        $data = json_decode((string) file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
+        $data = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
     } catch (JsonException) {
         authJson(400, ['status' => 'error', 'message' => 'Body JSON tidak valid.']);
     }
@@ -162,6 +180,11 @@ function authIssueAccessToken(string $employeeId, string $sessionId, int $absolu
 
 function authSetCsrfCookie(string $token, int $expiresAt): void
 {
+    if (defined('APP_TESTING') && APP_TESTING === true) {
+        $_COOKIE['csrf_token'] = $token;
+        return;
+    }
+
     if (!setcookie('csrf_token', $token, [
         'expires' => $expiresAt,
         'path' => '/',
@@ -180,6 +203,13 @@ function authSetTokenCookies(
     int $accessExpiresAt,
     int $refreshExpiresAt
 ): void {
+    if (defined('APP_TESTING') && APP_TESTING === true) {
+        $_COOKIE['access_token'] = $accessToken;
+        $_COOKIE['refresh_token'] = $refreshToken;
+        $_COOKIE['csrf_token'] = $csrfToken;
+        return;
+    }
+    
     $accessSet = setcookie('access_token', $accessToken, [
         'expires' => $accessExpiresAt,
         'path' => '/',
