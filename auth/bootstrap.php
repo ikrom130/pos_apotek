@@ -209,7 +209,7 @@ function authSetTokenCookies(
         $_COOKIE['csrf_token'] = $csrfToken;
         return;
     }
-    
+
     $accessSet = setcookie('access_token', $accessToken, [
         'expires' => $accessExpiresAt,
         'path' => '/',
@@ -354,6 +354,8 @@ function authRequireEmployee(): array
             'employee_role' => (string) $employee['employee_role'],
             'employee_username' => (string) $employee['employee_username'],
         ];
+    } catch (AuthResponseException $e) {
+        throw $e;
     } catch (Throwable $error) {
         error_log('Autentikasi gagal diproses: ' . $error->getMessage());
         authJson(500, ['status' => 'error', 'message' => 'Terjadi kesalahan server.']);
