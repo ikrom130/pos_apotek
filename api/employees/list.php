@@ -73,6 +73,8 @@ function handleListEmployees(PDO $employeeDb, array $apiActor): never
         $stmt->bindValue(count($params) + 2, ($page - 1) * $limit, PDO::PARAM_INT);
         $stmt->execute();
     
+    } catch (AuthResponseException $e) {
+        throw $e;
     } catch (Throwable $error) {
         employeeHandleDatabaseError($error, 'Daftar pegawai gagal dimuat');
     }

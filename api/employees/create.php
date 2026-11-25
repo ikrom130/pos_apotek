@@ -48,6 +48,8 @@ function handleCreateEmployee(PDO $employeeDb, array $apiActor, ?string $rawBody
         ]);
         $employeeDb->commit();
         $createId = $id;
+    } catch (AuthResponseException $e) {
+        throw $e;
     } catch (Throwable $error) {
         if ($employeeDb->inTransaction()) {
             $employeeDb->rollBack();
