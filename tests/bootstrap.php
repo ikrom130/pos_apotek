@@ -58,3 +58,4 @@ if (!defined('API_BOOTSTRAP_ENTRY')) {
 require_once dirname(__DIR__) . '/api/employees/create.php';
 require_once dirname(__DIR__) . '/api/employees/list.php';
 require_once dirname(__DIR__) . '/api/employees/detail.php';
+require_once dirname(__DIR__) . '/api/employees/update.php';
