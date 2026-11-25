@@ -59,3 +59,5 @@ require_once dirname(__DIR__) . '/api/employees/create.php';
 require_once dirname(__DIR__) . '/api/employees/list.php';
 require_once dirname(__DIR__) . '/api/employees/detail.php';
 require_once dirname(__DIR__) . '/api/employees/update.php';
+require_once dirname(__DIR__) . '/api/employees/status.php';
+require_once dirname(__DIR__) . '/api/employees/password.php';
