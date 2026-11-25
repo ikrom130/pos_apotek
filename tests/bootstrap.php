@@ -42,3 +42,17 @@ require_once dirname(__DIR__) . '/auth/login-process.php';
 require_once dirname(__DIR__) . '/auth/refresh.php';
 require_once dirname(__DIR__) . '/auth/logout.php';
 require_once dirname(__DIR__) . '/auth/me.php';
+
+if (!defined('API_INTERNAL_INCLUDE')) {
+    define('API_INTERNAL_INCLUDE', true);
+}
+require_once dirname(__DIR__) . '/api/_shared/id-sequence.php';
+
+if (!defined('EMPLOYEE_API_ENTRY')) {
+    define('EMPLOYEE_API_ENTRY', true);
+}
+if (!defined('API_BOOTSTRAP_ENTRY')) {
+    define('API_BOOTSTRAP_ENTRY', true);
+}
+
+require_once dirname(__DIR__) . '/api/employees/create.php';
