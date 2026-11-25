@@ -1,132 +1,144 @@
-# Referensi belajar: melengkapi login JWT
+# Login dan pengujian auth dengan Bruno
 
-File-file ini adalah **bahan salin dan pelajari**, bukan hasil edit langsung pada `D:\project\PHP\pos_apotek`. Source project tetap Anda yang ubah.
+Dokumen ini menjelaskan endpoint auth yang ada sekarang, cakupan PHPUnit, dan langkah menguji request HTTP dengan Bruno. Source PHP tetap Anda yang pelajari dan ubah.
 
-## Temuan audit yang menjadi dasar
+## Endpoint auth
 
-- `config/auth.php` sudah menetapkan RS256, jalur kunci, issuer, audience, dan batas access-token maksimal 15 menit.
-- Pasangan kunci RSA 3072 bit sudah dibuat di luar folder source. Saya hanya memeriksa nama file, tidak membaca isi private key.
-- `auth/login-process.php` masih contoh: belum memeriksa username/sandi, `JWT::encode` masih dikomentari, refresh token belum ditulis ke database, dan redirect mengarah ke `dashboard.php` yang tidak ada di struktur proyek.
-- Tabel target yang cocok adalah `employees`, `auth_sessions`, dan `auth_refresh_tokens`. Kolom database menyimpan `token_hash`; contoh lama menyebut tabel `user_refresh_tokens` dan menyimpan token mentah.
-- `api/selling.php` saat ini belum autentikasi dan menerima `employee_id` dari body. Tahap sales nanti harus mengambil pegawai dari JWT yang sudah diverifikasi.
-- Endpoint sales yang ada tampak memakai skema versi sebelumnya (selling, selling_details, product_unit_conversions, expired_date), sedangkan SQL target mendefinisikan sales, sale_items, product_units.conversion_factor, dan expiry_date. Sales berikutnya harus mengikuti SQL target, bukan menyalin query lama.
-- Saya melihat file autentikasi/Composer masih berstatus untracked di Git. Hindari perintah reset/clean; panduan ini tidak mengubahnya.
+| Method | URL                       | Fungsi                                              | Pemeriksaan utama                                                     |
+| ------ | ------------------------- | --------------------------------------------------- | --------------------------------------------------------------------- |
+| GET    | `/auth/csrf-token.php`    | Membuat token CSRF dan memasang cookie `csrf_token` | Method GET; cookie Secure dan SameSite Strict                         |
+| POST   | `/auth/login-process.php` | Memvalidasi kredensial dan membuat sesi             | CSRF, Origin, JSON, username/sandi, status aktif, rate limit          |
+| GET    | `/auth/me.php`            | Membaca pegawai dari sesi aktif                     | JWT access cookie, sesi aktif, batas idle dan absolut, status pegawai |
+| POST   | `/auth/refresh.php`       | Memutar refresh token dan menerbitkan access baru   | CSRF, refresh cookie, sesi, expiry, reuse detection                   |
+| POST   | `/auth/logout.php`        | Mencabut sesi dan membersihkan cookie               | CSRF; idempotent jika cookie sesi tidak ada                           |
 
-## Keputusan implementasi
+Semua token auth berada di cookie `HttpOnly` (CSRF cookie tidak `HttpOnly`). Jangan menyimpan access/refresh token di `localStorage` atau menyalinnya ke environment Bruno. Login dan refresh mengeluarkan token CSRF baru; perbarui nilai `csrfToken` dari JSON response sebelum request POST berikutnya.
 
-- Gunakan library `firebase/php-jwt` yang sudah ada, kunci RS256 yang sudah dibuat, dan skema target SQL.
-- Access JWT berlaku 5 menit; refresh token acak 256-bit dirotasi setiap refresh, disimpan hanya sebagai SHA-256 hash, berlaku maksimal 7 hari per token.
-- Sesi memiliki batas maksimum 30 hari dan kedaluwarsa setelah 12 jam tidak aktif.
-- Access dan refresh dikirim sebagai cookie `HttpOnly; Secure; SameSite=Strict`. Semua POST memerlukan token CSRF dan origin aplikasi yang tepat. Jalankan situs Herd lewat HTTPS.
-- Batas login: 5 kegagalan per kombinasi username/IP atau 30 per IP dalam 15 menit. Tabel baru menyimpan HMAC username/IP, bukan nilainya.
-- Sandi menggunakan `password_hash()`/`password_verify()` dengan `PASSWORD_DEFAULT`. Hash dummy menyeimbangkan waktu respons ketika username tidak ditemukan.
+## PHPUnit yang tersedia
 
-## Urutan penerapan oleh Anda
+- `tests/auth/AuthLoginTest.php`
+- `tests/auth/AuthLogoutTest.php`
+- `tests/auth/AuthMeTest.php`
+- `tests/auth/AuthRefreshTest.php`
+- `tests/auth/AuthRequireEmployeeTest.php` menguji helper middleware, bukan endpoint HTTP.
+- `tests/IdSequenceTest.php`
+- `tests/employees/EmployeeCreateTest.php`
 
-1. Pilih PHP **8.5.12 atau patch keamanan yang lebih baru** untuk situs ini di Herd. Di folder proyek, jalankan `herd php -v`. Kode referensi tetap kompatibel dengan PHP 8.4.
-2. Pastikan situs Herd menggunakan HTTPS. Cookie Secure tidak bekerja pada HTTP.
-3. Buat `AUTH_RATE_LIMIT_KEY` dan `AUTH_DUMMY_PASSWORD_HASH` memakai perintah di bawah, lalu tambahkan nilainya ke `.env` lokal. Jangan menaruh nilai sungguhan di Git atau membagikannya.
-4. Tinjau lalu jalankan SQL `auth_login_attempts.sql` pada database target lokal. Ini tabel tambahan yang Anda setujui. Hapus catatan lama berkala dengan `DELETE FROM auth_login_attempts WHERE attempted_at < UTC_TIMESTAMP(6) - INTERVAL 30 DAY;`.
-5. Salin/periksa `config/auth.php`, lalu letakkan helper dan endpoint ke folder `auth/` sesuai peta file.
-6. Tambahkan variabel konfigurasi yang ditunjukkan. Jangan menyalin kredensial dari file `.env` ke dokumen ini.
-7. Jika belum ada akun admin dengan hash valid, salin `create-first-admin.php` ke `scripts/` dan jalankan wrapper PowerShell di bawah. Script hanya mengisi admin placeholder `EMP-00001` atau membuatnya saat tabel pegawai kosong; ia berhenti bila ada data lain yang tak cocok.
-8. Buat halaman login yang meminta token dari `auth/csrf-token.php`, mengirim JSON ke `auth/login-process.php`, dan menyimpan CSRF token di memori JavaScript saja.
-9. Lindungi halaman dashboard serta setiap API dengan `authRequireEmployee()`. Jangan percaya `employee_id` dari body.
+Belum ada PHPUnit khusus untuk `csrf-token.php`. PHPUnit memanggil fungsi handler PHP secara langsung, jadi Bruno melengkapi pengujian dengan HTTP request ke situs Herd.
 
-Pembuatan nilai lokal (jalankan dari terminal folder proyek):
+Jalankan dari PowerShell di folder project:
 
 ```powershell
-herd php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
-herd php -r "echo password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT), PHP_EOL;"
+vendor\bin\phpunit.bat
 ```
 
-Perintah pertama mengeluarkan secret HMAC 64 karakter; simpan sebagai `AUTH_RATE_LIMIT_KEY`. Perintah kedua mengeluarkan hash acak; simpan sebagai `AUTH_DUMMY_PASSWORD_HASH`. Sandi acak yang di-hash tidak ditampilkan.
+**Peringatan database test:** bootstrap test mengosongkan beberapa tabel (`employees`, `auth_sessions`, `auth_refresh_tokens`, `auth_login_attempts`, dan sequence pada test allocator/create). Pastikan konfigurasi mengarah ke database khusus test. `tests/bootstrap.php` menetapkan koneksi sendiri; periksa isinya sebelum menjalankan dan jangan gunakan database development utama/produksi.
 
-Contoh nama variabel `.env` saja (isi rahasia tetap lokal):
+## Instal atau buka Bruno di Windows
 
-```dotenv
-APP_ORIGIN=https://<domain-herd-anda>
-JWT_PRIVATE_KEY_PATH=D:/Project/PHP/secrets/pos_apotek/private_key.pem
-JWT_PUBLIC_KEY_PATH=D:/Project/PHP/secrets/pos_apotek/private_public.pem
-JWT_ISSUER=https://<domain-herd-anda>
-JWT_AUDIENCE=https://<domain-herd-anda>
-JWT_ACCESS_TTL=300
-JWT_REFRESH_TTL=604800
-AUTH_SESSION_TTL=2592000
-AUTH_IDLE_TTL=43200
-AUTH_RATE_LIMIT_KEY=<hasil-perintah-pertama>
-AUTH_DUMMY_PASSWORD_HASH=<hasil-perintah-kedua>
-```
+1. Cek Start Menu Windows dengan mengetik `Bruno`. Jika aplikasi sudah ada, buka aplikasi tersebut.
+2. Jika belum terpasang, unduh installer Windows x64 dari [halaman download resmi Bruno](https://www.usebruno.com/downloads). Pilih Windows x64; gunakan Arm64 hanya jika perangkat Windows Anda berbasis ARM.
+3. Alternatif lewat Windows Package Manager dari PowerShell:
 
-`APP_ORIGIN`, issuer, dan audience harus persis menggunakan origin HTTPS situs Herd Anda (tanpa slash path). Jalur kunci di atas mengikuti skrip generator yang sudah ada; sesuaikan jika lokasi aktual Anda berbeda.
+   ```powershell
+   winget install bruno.bruno
+   ```
 
-## Peta file referensi → lokasi di proyek
+4. Setelah instalasi selesai, buka Bruno dari Start Menu.
+5. Pilih untuk membuat collection baru. Beri nama `POS Apotek Local`. Simpan collection di luar repository bila belum ingin menambahkan file Bruno ke Git.
+6. Buat environment `Local` dengan variabel:
 
-| File referensi            | Salin/terapkan pada proyek                                                    |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| `auth_login_attempts.sql` | Jalankan manual pada database target; jangan otomatis dari PHP                |
-| `config-auth.php`         | Ganti/merge ke `config/auth.php`                                              |
-| `auth-bootstrap.php`      | `auth/bootstrap.php`                                                          |
-| `auth-csrf-token.php`     | `auth/csrf-token.php`                                                         |
-| `auth-login-process.php`  | Ganti isi `auth/login-process.php`                                            |
-| `auth-refresh.php`        | `auth/refresh.php`                                                            |
-| `auth-logout.php`         | `auth/logout.php`                                                             |
-| `auth-me.php`             | `auth/me.php`                                                                 |
-| `create-first-admin.php`  | `scripts/create-first-admin.php` (jalankan manual sekali; bukan endpoint web) |
+   | Nama            | Nilai                                                                  |
+   | --------------- | ---------------------------------------------------------------------- |
+   | `baseUrl`       | `https://<domain-Herd-lokal>` tanpa slash akhir                        |
+   | `appOrigin`     | origin persis dari `APP_ORIGIN`, tanpa slash akhir                     |
+   | `adminUsername` | username admin development                                             |
+   | `adminPassword` | sandi admin development, tandai secret/private bila fitur itu tersedia |
+   | `csrfToken`     | kosong pada awalnya; isi manual dari response CSRF terbaru             |
 
-Jalankan admin bootstrap dari PowerShell. Password dibaca sebagai secure string, diteruskan sementara melalui environment proses, lalu dihapus; jangan ubahnya menjadi argumen command line.
+   Jangan gunakan `http://` karena cookie auth disetel `Secure`. Pastikan sertifikat HTTPS Herd dipercaya Windows dan `baseUrl` membuka aplikasi di browser.
 
-```powershell
-$secure = Read-Host 'Sandi admin awal' -AsSecureString
-$ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-try {
-  $env:BOOTSTRAP_ADMIN_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
-  $env:BOOTSTRAP_ADMIN_USERNAME = Read-Host 'Username admin'
-  $env:BOOTSTRAP_EMPLOYEE_NAME = Read-Host 'Nama admin'
-  herd php scripts/create-first-admin.php
-} finally {
-  Remove-Item Env:BOOTSTRAP_ADMIN_PASSWORD -ErrorAction SilentlyContinue
-  Remove-Item Env:BOOTSTRAP_ADMIN_USERNAME -ErrorAction SilentlyContinue
-  Remove-Item Env:BOOTSTRAP_EMPLOYEE_NAME -ErrorAction SilentlyContinue
-  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
-  $secure.Dispose()
-}
-```
+7. Pastikan Cookie Jar Bruno aktif. Request berikutnya ke host yang sama harus menyimpan cookie `csrf_token`, `access_token`, dan `refresh_token` dari response. Token access/refresh bersifat HttpOnly di server; gunakan cookie jar, bukan header Authorization manual.
 
-## Cara halaman vanilla JS memanggil login
+## Membuat dan mengirim request
 
-```js
-const csrfResponse = await fetch("/auth/csrf-token.php", {
-  credentials: "same-origin",
-});
-const { csrf_token: csrfToken } = await csrfResponse.json();
+Untuk setiap request, pilih method dan URL berikut. Pada tab Headers/Body Bruno, masukkan nilai yang ditampilkan.
 
-const response = await fetch("/auth/login-process.php", {
-  method: "POST",
-  credentials: "same-origin",
-  headers: {
-    "Content-Type": "application/json",
-    "X-CSRF-Token": csrfToken,
-  },
-  body: JSON.stringify({ username, password }),
-});
+### 1. Ambil CSRF awal
 
-const result = await response.json();
-if (response.ok) {
-  // Cookie token dipasang browser; simpan hanya CSRF token di memori.
-  window.location.assign("/index.php");
-} else {
-  // Tampilkan result.message tanpa membedakan username tak ada dan sandi salah.
-}
-```
+- Method: `GET`
+- URL: `{{baseUrl}}/auth/csrf-token.php`
+- Tidak memerlukan body atau header CSRF.
+- Kirim request; harapkan HTTP `200` dan JSON berisi `csrf_token`.
+- Pastikan Cookie Jar menyimpan cookie `csrf_token` untuk host lokal.
+- Salin nilai JSON `csrf_token` ke environment `csrfToken`.
 
-Setelah login, halaman memanggil `GET /auth/me.php` untuk memeriksa sesi. Jika access token kedaluwarsa, panggil `POST /auth/refresh.php` dengan cookie otomatis dan header `X-CSRF-Token` terbaru. Jangan simpan access/refresh token di `localStorage`.
+### 2. Login sebagai admin
 
-## Hal yang belum termasuk tahap ini
+- Method: `POST`
+- URL: `{{baseUrl}}/auth/login-process.php`
+- Headers:
+  - `Content-Type: application/json`
+  - `Origin: {{appOrigin}}`
+  - `X-CSRF-Token: {{csrfToken}}`
+- Body → JSON:
 
-- Tabel dan endpoint master employee/user (berikutnya). Akun demo di SQL memakai hash placeholder, jadi tidak dapat dipakai login; login memerlukan minimal satu pegawai aktif dengan hash `password_hash()` yang valid.
-- API produk lengkap dan sales terautentikasi.
-- MFA, pemulihan akun, dan integrasi klien non-browser.
-- Saya tidak menjalankan kode atau SQL di mesin Anda dan tidak mengubah proyek D:.
+  ```json
+  {
+    "username": "{{adminUsername}}",
+    "password": "{{adminPassword}}"
+  }
+  ```
 
-File berikut adalah kode referensi yang bisa Anda terapkan bertahap. Periksa setiap langkah dan pastikan tidak ada output PHP sebelum header/cookie dikirim.
+- Bruno mengirim cookie CSRF dari Cookie Jar. Harapkan HTTP `200`, `status: success`, objek `employee`, dan cookie auth baru.
+- Ganti environment `csrfToken` dengan `csrf_token` dari response login. Login merotasi token CSRF.
+
+### 3. Periksa sesi
+
+- Method: `GET`
+- URL: `{{baseUrl}}/auth/me.php`
+- Body/header tambahan tidak diperlukan.
+- Cookie Jar harus mengirim `access_token` otomatis.
+- Harapkan HTTP `200` dan profil admin.
+
+### 4. Refresh sesi
+
+- Method: `POST`
+- URL: `{{baseUrl}}/auth/refresh.php`
+- Headers: `Origin: {{appOrigin}}` dan `X-CSRF-Token: {{csrfToken}}`.
+- Body kosong.
+- Cookie Jar mengirim `refresh_token` dan `csrf_token`.
+- Harapkan HTTP `200`; refresh cookie dirotasi. Perbarui environment `csrfToken` dari JSON response.
+
+### 5. Periksa access token setelah refresh
+
+Ulangi request `GET {{baseUrl}}/auth/me.php`. Harapkan `200`. Ini memastikan cookie access yang baru diterbitkan digunakan.
+
+### 6. Logout
+
+- Method: `POST`
+- URL: `{{baseUrl}}/auth/logout.php`
+- Headers: `Origin: {{appOrigin}}` dan `X-CSRF-Token: {{csrfToken}}`.
+- Body kosong.
+- Harapkan HTTP `200` dan response sukses. Cookie sesi dibersihkan.
+
+### 7. Pastikan sesi sudah ditolak
+
+Ulangi `GET {{baseUrl}}/auth/me.php`. Harapkan HTTP `401`. Bila Bruno masih mengirim cookie lama, periksa Cookie Jar dan hapus cookie host tersebut, lalu pastikan request logout memang menerima Origin/CSRF yang benar.
+
+## Kasus validasi tambahan
+
+Jalankan pada database development terpisah:
+
+- Login dengan sandi salah: harapkan `401` dengan pesan generik.
+- Login body tidak valid (contoh username di bawah 3 karakter): harapkan `422`.
+- POST tanpa `Origin` tepat atau token CSRF cocok: harapkan `403`.
+- GET ke endpoint POST: harapkan `405`.
+- Enam login gagal dengan username uji yang sama dalam 15 menit: percobaan berikutnya dapat menerima `429`. Hindari ini pada akun admin penting karena rate limit juga dapat memblokir login benar untuk kombinasi tersebut.
+
+Jika muncul `403`, periksa ketiga hal ini sekaligus: origin persis sama dengan `APP_ORIGIN`, cookie CSRF tersimpan, dan nilai header cocok dengan cookie terbaru. Jika muncul `401`, cek akun aktif dan cookie access/refresh.
+
+## Referensi Bruno
+
+- [Download resmi Bruno](https://www.usebruno.com/downloads)
+- [Dokumentasi Bruno](https://docs.usebruno.com/)
