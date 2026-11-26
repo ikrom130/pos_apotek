@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-declare(strict_types=1);
-
 if (!defined('APP_TESTING')) {
     define('EMPLOYEE_API_ENTRY', true);
     require_once __DIR__ . '/_bootstrap.php';
