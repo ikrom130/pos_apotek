@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 
-if (!defined('EMPLOYEE_API_ENTRY')) {
+if (!defined('APP_TESTING') && !defined('EMPLOYEE_API_ENTRY')) {
     http_response_code(404);
     exit;
 }
 
-define('API_BOOTSTRAP_ENTRY', true);
+if (!defined('API_BOOTSTRAP_ENTRY')) {
+    define('API_BOOTSTRAP_ENTRY', true);
+}
 require_once dirname(__DIR__) . '/_shared/bootstrap.php';
 
-$employeeActor = $apiActor;
-$employeeDb = $apiDb;
+if (!defined('APP_TESTING')) {
+    $employeeActor = $apiActor;
+    $employeeDb = $apiDb;
+}
 
 
 function employeeRequireId(): string

@@ -2,12 +2,18 @@
 
 declare(strict_types=1);
 
-define('EMPLOYEE_API_ENTRY', true);
-require_once __DIR__ . '/_bootstrap.php';
-apiRequireMethod('GET');
-apiRequireRole($apiActor, ['admin']);
+if (!defined('APP_TESTING')) {
+    define('EMPLOYEE_API_ENTRY', true);
+    require_once __DIR__ . '/_bootstrap.php';
+} else {
+    require_once __DIR__ . '/_bootstrap.php';
+}
 
-try {
+function handleListEmployees(PDO $employeeDb, array $apiActor): never
+{
+    apiRequireMethod('GET');
+    apiRequireRole($apiActor, ['admin']);
+    
     $page = filter_var(apiQueryValue('page', '1'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
     if ($page === false) {
         authJson(422, ['status' => 'error', 'message' => 'Filter pagination page harus 1-1000000']);
@@ -48,29 +54,38 @@ try {
         $params[] = (int) $active;
     }
 
-    $whereSql = $where === [] ? '' : ' WHERE ' . implode(' AND ', $where);
-    $count = $employeeDb->prepare('SELECT COUNT(*) FROM employees' . $whereSql);
-    $count->execute($params);
-    $total = (int) $count->fetchColumn();
-
-    $stmt = $employeeDb->prepare(
-        'SELECT employee_id, employee_name, employee_role, employee_phone,
-                employee_username, is_active, created_at, updated_at
-         FROM employees' . $whereSql .
-        ' ORDER BY employee_name ASC, employee_id ASC LIMIT ? OFFSET ?'
-    );
-    foreach ($params as $index => $value) {
-        $stmt->bindValue($index + 1, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    try {
+        $whereSql = $where === [] ? '' : ' WHERE ' . implode(' AND ', $where);
+        $count = $employeeDb->prepare('SELECT COUNT(*) FROM employees' . $whereSql);
+        $count->execute($params);
+        $total = (int) $count->fetchColumn();
+    
+        $stmt = $employeeDb->prepare(
+            'SELECT employee_id, employee_name, employee_role, employee_phone,
+                    employee_username, is_active, created_at, updated_at
+             FROM employees' . $whereSql .
+            ' ORDER BY employee_name ASC, employee_id ASC LIMIT ? OFFSET ?'
+        );
+        foreach ($params as $index => $value) {
+            $stmt->bindValue($index + 1, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+        }
+        $stmt->bindValue(count($params) + 1, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(count($params) + 2, ($page - 1) * $limit, PDO::PARAM_INT);
+        $stmt->execute();
+    
+    } catch (AuthResponseException $e) {
+        throw $e;
+    } catch (Throwable $error) {
+        employeeHandleDatabaseError($error, 'Daftar pegawai gagal dimuat');
     }
-    $stmt->bindValue(count($params) + 1, $limit, PDO::PARAM_INT);
-    $stmt->bindValue(count($params) + 2, ($page - 1) * $limit, PDO::PARAM_INT);
-    $stmt->execute();
 
     authJson(200, [
         'status' => 'success',
         'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
         'pagination' => ['page' => $page, 'limit' => $limit, 'total' => $total],
     ]);
-} catch (Throwable $error) {
-    employeeHandleDatabaseError($error, 'Daftar pegawai gagal dimuat');
+}
+
+if (!defined('APP_TESTING')) {
+    handleListEmployees($employeeDb, $apiActor);
 }

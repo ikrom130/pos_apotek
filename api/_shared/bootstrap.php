@@ -9,8 +9,10 @@ if (!defined('API_BOOTSTRAP_ENTRY')) {
 
 require_once dirname(__DIR__, 2) . '/auth/bootstrap.php';
 
-$apiActor = authRequireEmployee();
-$apiDb = $authDb;
+if (!defined('APP_TESTING')) {
+    $apiActor = authRequireEmployee();
+    $apiDb = $authDb;
+}
 
 if (!defined('API_INTERNAL_INCLUDE')) {
     define('API_INTERNAL_INCLUDE', true);
@@ -29,10 +31,6 @@ function apiRequireRole(array $actor, array $allowedRoles): void
 {
     $actorRole = $actor['employee_role'] ?? null;
     if (!is_string($actorRole) || !in_array($actorRole, $allowedRoles, true)) {
-        authJson(403, ['status' => 'error', 'message' => 'Role tidak memiliki akses ke fitur ini.']);
-    }
-
-    if (!in_array($apiActor['employee_role'] ?? null, $allowedRoles, true)) {
         authJson(403, ['status' => 'error', 'message' => 'Role tidak memiliki akses ke fitur ini.']);
     }
 }
