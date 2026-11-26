@@ -53,6 +53,8 @@ if (!defined('EMPLOYEE_API_ENTRY')) {
 }
 if (!defined('API_BOOTSTRAP_ENTRY')) {
     define('API_BOOTSTRAP_ENTRY', true);
+}if (!defined('SUPPLIER_API_ENTRY')) {
+    define('SUPPLIER_API_ENTRY', true);
 }
 
 require_once dirname(__DIR__) . '/api/employees/create.php';
@@ -61,3 +63,4 @@ require_once dirname(__DIR__) . '/api/employees/detail.php';
 require_once dirname(__DIR__) . '/api/employees/update.php';
 require_once dirname(__DIR__) . '/api/employees/status.php';
 require_once dirname(__DIR__) . '/api/employees/password.php';
+require_once dirname(__DIR__) . '/api/suppliers/create.php';
