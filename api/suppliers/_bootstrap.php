@@ -47,6 +47,15 @@ function supplierReadData(array $data): array
     ];
 }
 
+function supplierRequireId(): string
+{
+    $id = strtoupper(apiQueryValue('id'));
+    if (preg_match('/\ASUP-[0-9]{5,11}\z/', $id) !== 1) {
+        authJson(422, ['status' => 'error', 'message' => 'supplier_id harus berformat SUP-00001.']);
+    }
+    return $id;
+}
+
 function supplierHandleDatabaseError(Throwable $error, string $context): never
 {
     if ($error instanceof PDOException && ((string) $error->getCode() === '23000' || (($error->errorInfo[0] ?? null) === '23000'))) {
