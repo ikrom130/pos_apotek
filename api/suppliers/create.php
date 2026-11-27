@@ -10,7 +10,7 @@ if (!defined('APP_TESTING')) {
     require_once __DIR__ . '/_bootstrap.php';
 }
 
-function handleCreateSupplier(PDO $db, array $apiActor, ?string $rawBody = null): never
+function handleCreateSuppliers(PDO $db, array $apiActor, ?string $rawBody = null): never
 {
     authRequireCsrf();
     apiRequireMethod('POST');
@@ -51,5 +51,5 @@ function handleCreateSupplier(PDO $db, array $apiActor, ?string $rawBody = null)
 }
 
 if (!defined('APP_TESTING')) {
-    handleCreateSupplier($db, $apiActor);
+    handleCreateSuppliers($db, $apiActor);
 }
