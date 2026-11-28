@@ -1,0 +1,906 @@
+{
+  "info": {
+    "_postman_id": "fb9af867-3434-4d04-a132-2092e13c1b3c",
+    "name": "POS Apotek - Auth, Employees, Suppliers",
+    "description": "Pengujian HTTP lokal terbatas pada endpoint auth, employees, dan suppliers. Jalankan berurutan (Run collection) dengan database development khusus. Collection membuat satu pegawai uji dan satu supplier uji; endpoint delete tidak tersedia.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Login admin dan sesi",
+      "item": [
+        {
+          "name": "01.1 Ambil token CSRF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/csrf-token.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('csrf_token tersedia', function () { pm.expect(body.csrf_token).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('csrfToken', body.csrf_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.2 Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login-process.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Login admin berhasil', function () { pm.expect(body.status).to.eql('success'); pm.expect(body.employee.employee_role).to.eql('admin'); });",
+                  "pm.environment.set('csrfToken', body.csrf_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.3 Periksa sesi admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Profil admin tersedia', function () { pm.expect(pm.response.json().employee.employee_role).to.eql('admin'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.4 Refresh sesi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/refresh.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Refresh sukses', function () { pm.expect(body.status).to.eql('success'); pm.expect(body.csrf_token).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('csrfToken', body.csrf_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01.5 Periksa sesi setelah refresh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Access cookie baru aktif', function () { pm.expect(pm.response.json().employee.employee_id).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Employees (admin)",
+      "item": [
+        {
+          "name": "02.1 List employees",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/employees/list.php?page=1&limit=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response punya daftar dan pagination', function () { const b = pm.response.json(); pm.expect(b.data).to.be.an('array'); pm.expect(b.pagination.total).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.2 Create employee uji",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_name\": \"Pegawai Uji {{runId}}\",\n  \"employee_role\": \"kasir\",\n  \"employee_phone\": \"081234567890\",\n  \"employee_username\": \"{{employeeUsername}}\",\n  \"employee_password\": \"{{employeeInitialPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/employees/create.php"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = Date.now().toString();",
+                  "pm.environment.set('runId', id);",
+                  "pm.environment.set('employeeUsername', 'pm.' + id);",
+                  "pm.environment.set('employeeInitialPassword', 'AwalPegawai' + id + '!');",
+                  "pm.environment.set('employeeResetPassword', 'ResetPegawai' + id + '!');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Employee dibuat dengan ID server-side', function () { pm.expect(body.status).to.eql('success'); pm.expect(body.employee_id).to.match(/^EMP-[0-9]{5,11}$/); });",
+                  "pm.environment.set('employeeId', body.employee_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.3 Detail employee uji",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/employees/detail.php?id={{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Detail cocok dan tidak membocorkan hash', function () { const d = pm.response.json().data; pm.expect(d.employee_id).to.eql(pm.environment.get('employeeId')); pm.expect(d).to.not.have.property('employee_password'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.4 Update profil employee uji",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_name\": \"Pegawai Uji Update {{runId}}\",\n  \"employee_role\": \"kasir\",\n  \"employee_phone\": \"081234567891\",\n  \"employee_username\": \"{{employeeUsername}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/employees/update.php?id={{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.5 Admin reset password employee uji",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_password\": \"{{employeeResetPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/employees/password.php?id={{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Sandi diperbarui dan sesi target dicabut', function () { pm.expect(pm.response.json().status).to.eql('success'); pm.expect(pm.response.json().employee_id).to.eql(pm.environment.get('employeeId')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.6 Nonaktifkan employee uji",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/employees/status.php?id={{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02.7 Aktifkan kembali employee uji",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/employees/status.php?id={{employeeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Suppliers (admin)",
+      "item": [
+        {
+          "name": "03.1 List suppliers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/suppliers/list.php?page=1&limit=100&active=1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response punya daftar dan pagination', function () { const b = pm.response.json(); pm.expect(b.data).to.be.an('array'); pm.expect(b.pagination.total).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.2 Create supplier uji",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_name\": \"{{supplierName}}\",\n  \"supplier_phone\": \"0812-3456-7890\",\n  \"supplier_email\": \"supplier.{{runId}}@example.test\",\n  \"supplier_address\": \"Jl. Veteran No. 9, Jakarta Pusat\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/suppliers/create.php"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('supplierName', 'Supplier Uji ' + pm.environment.get('runId'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Supplier dibuat dengan ID server-side', function () { pm.expect(body.status).to.eql('success'); pm.expect(body.supplier_id).to.match(/^SUP-[0-9]{5,11}$/); });",
+                  "pm.environment.set('supplierId', body.supplier_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.3 Detail supplier uji",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/suppliers/detail.php?id={{supplierId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Detail supplier cocok', function () { pm.expect(pm.response.json().data.supplier_id).to.eql(pm.environment.get('supplierId')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.4 Update supplier uji",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_name\": \"Supplier Uji Update {{runId}}\",\n  \"supplier_phone\": \"0812-3456-7891\",\n  \"supplier_email\": \"supplier.updated.{{runId}}@example.test\",\n  \"supplier_address\": \"Jl. Veteran No. 10, Jakarta Pusat\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/suppliers/update.php?id={{supplierId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.5 Nonaktifkan supplier uji",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/suppliers/status.php?id={{supplierId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.6 Aktifkan kembali supplier uji",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/suppliers/status.php?id={{supplierId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03.7 CSRF salah ditolak",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "token-salah-untuk-uji"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_name\": \"Supplier CSRF Ditolak\",\n  \"supplier_phone\": \"\",\n  \"supplier_email\": \"\",\n  \"supplier_address\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/suppliers/create.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Batas akses role kasir dan logout",
+      "item": [
+        {
+          "name": "04.1 Logout admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.2 Ambil CSRF untuk login pegawai uji",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/csrf-token.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('csrf_token tersedia', function () { pm.expect(body.csrf_token).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('csrfToken', body.csrf_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.3 Login sebagai employee kasir uji",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{employeeUsername}}\",\n  \"password\": \"{{employeeResetPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login-process.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Login pegawai uji berhasil', function () { pm.expect(body.status).to.eql('success'); pm.expect(body.employee.employee_role).to.eql('kasir'); });",
+                  "pm.environment.set('csrfToken', body.csrf_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.4 Periksa sesi pegawai kasir",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Role kasir terlihat pada profil', function () { pm.expect(pm.response.json().employee.employee_role).to.eql('kasir'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.5 Kasir ditolak dari employees list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/employees/list.php?page=1&limit=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.6 Kasir ditolak dari suppliers list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/suppliers/list.php?page=1&limit=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.7 Logout pegawai uji",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{appOrigin}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status JSON success', function () { pm.expect(pm.response.json().status).to.eql('success'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04.8 Sesi setelah logout ditolak",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me.php"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": []
+}
