@@ -68,3 +68,4 @@ require_once dirname(__DIR__) . '/api/employees/password.php';
 require_once dirname(__DIR__) . '/api/suppliers/create.php';
 require_once dirname(__DIR__) . '/api/suppliers/list.php';
 require_once dirname(__DIR__) . '/api/suppliers/detail.php';
+require_once dirname(__DIR__) . '/api/suppliers/update.php';
