@@ -54,7 +54,7 @@ final class SupplierCreateTest extends TestCase
     {
         $activeActor = $actor ?? $this->adminActor;
         try {
-            handleCreateSupplier(
+            handleCreateSuppliers(
                 $this->db,
                 $activeActor,
                 json_encode($payload, JSON_THROW_ON_ERROR)
