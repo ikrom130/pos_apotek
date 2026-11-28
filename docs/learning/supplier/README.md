@@ -1,66 +1,58 @@
-# API supplier dan pengujiannya
+# API Suppliers dan pengujian
 
-README ini mencatat kondisi endpoint supplier yang terlihat di source. PHP tetap Anda yang tulis sendiri.
+Source supplier aktif berada di api/suppliers/ (plural). Folder lama api/supplier/ (singular) sudah dihapus dari working tree.
 
-## Kondisi endpoint
+## Endpoint dan akses
 
-| File | Status saat ini | Catatan |
-|---|---|---|
-| `api/supplier/create.php` | Endpoint baru, terlindungi | POST; login; role `admin` atau `apoteker`; CSRF dan Origin; validasi body; ID `SUP-xxxxx` dibuat server; transaksi database. |
-| `api/supplier/_bootstrap.php` | Helper endpoint baru | Memuat bootstrap auth/API, validasi nama/telepon/email/alamat, dan pemetaan error database. Jangan diakses langsung. |
-| `api/supplier/suppliers.php` | Endpoint lama | Belum memakai autentikasi; query memakai tabel `supplier` dan kolom `officer_phone` yang tidak cocok dengan skema target yang didokumentasikan. |
-| `api/supplier/add_supplier.php` | Endpoint lama | Belum memakai autentikasi/CSRF; menerima `supplier_id` dari request. Jangan dipakai pada data penting. |
-| `api/supplier/set_supplier.php` | Endpoint lama | Belum memakai autentikasi/CSRF; ada ketidakcocokan nama parameter SQL dan field `supplier_adress`. |
-| `api/supplier/delete_supplier.php` | Endpoint lama/berbahaya | Nama file menyiratkan supplier, tetapi aksi menghapus dari tabel `products` dan memeriksa action `delete_product`; belum ada autentikasi/CSRF. Jangan panggil endpoint ini. |
+Semua endpoint melewati autentikasi sesi dan membatasi role ke admin atau apoteker. Request mutasi juga memerlukan Origin yang sama dengan APP_ORIGIN dan CSRF header-cookie yang cocok.
 
-Endpoint baru yang dapat diuji:
+| Method | Endpoint | CSRF | Fungsi |
+|---|---|---:|---|
+| GET | /api/suppliers/list.php?page=1&limit=20&search=&active=1 | Tidak | Daftar, pencarian, filter aktif, pagination |
+| GET | /api/suppliers/detail.php?id=SUP-00001 | Tidak | Detail supplier |
+| POST | /api/suppliers/create.php | Ya | Membuat supplier dengan ID server-side |
+| PUT | /api/suppliers/update.php?id=SUP-00001 | Ya | Mengubah profil |
+| PATCH | /api/suppliers/status.php?id=SUP-00001 | Ya | Mengaktifkan/nonaktifkan |
 
-```text
-POST {{baseUrl}}/api/supplier/create.php
-```
+Tidak ada endpoint delete.
 
-Header: `Content-Type: application/json`, `Origin: {{appOrigin}}`, dan `X-CSRF-Token: {{csrfToken}}`. Cookie CSRF dan sesi harus tersimpan di Postman Cookie Jar. Body:
+## Request dan validasi
 
-```json
-{
-  "supplier_name": "PT Supplier Uji",
-  "supplier_phone": "0812-3456-7890",
-  "supplier_email": "uji@example.test",
-  "supplier_address": "Jl. Veteran No. 9, Jakarta Pusat"
-}
-```
+Create dan update menerima JSON dengan supplier_name, supplier_phone, supplier_email, supplier_address. Nama wajib 2–100 karakter. Telepon opsional 8–15 karakter. Email opsional, dinormalisasi huruf kecil dan diperiksa dengan regex. Alamat opsional maksimal 255 karakter dan dibatasi whitelist karakter. Field opsional kosong menjadi NULL.
 
-Respons normal `201` berisi `supplier_id`. Role yang boleh membuat supplier adalah `admin` dan `apoteker`; role `kasir` ditolak. Field telepon, email, dan alamat boleh kosong; nilai kosong disimpan sebagai `NULL`. Nama 2–100 karakter; telepon 8–15 karakter; alamat maksimal 255 karakter. Format email diperiksa dengan regex sederhana. Validasi ini bukan jaminan bahwa alamat email benar-benar ada.
+Status menerima JSON boolean atau integer 0/1, lalu nilai dinormalkan ke integer sebelum query. String "0"/"1" ditolak. ID dinormalisasi ke huruf besar dan harus berupa SUP- diikuti 5–11 digit.
 
-## File Postman
+Create memulai transaksi, membuat ID dari id_sequences dengan row lock, memasukkan supplier aktif, lalu commit. Query memakai prepared statement. Tidak ada delete; status nonaktif mempertahankan relasi dan riwayat.
 
-File import disimpan terpisah dari source project:
+## Test PHPUnit
 
-- [Collection POS Apotek — Auth dan Supplier](C:/Users/Silent%20Demon/Documents/Codex/2026-11-18/in/pos-apotek-auth-supplier.postman_collection.json)
-- [Environment POS Apotek Local](C:/Users/Silent%20Demon/Documents/Codex/2026-11-18/in/pos-apotek-local.postman_environment.json)
+- tests/suppliers/CreateSupplierTest.php
+- tests/suppliers/SupplierListTest.php
+- tests/suppliers/SupplierDetailTest.php
+- tests/suppliers/SupplierUpdateTest.php
+- tests/suppliers/SupplierStatusTest.php
 
-Import keduanya dari Postman (`Import` → pilih file). Pilih environment `POS Apotek Local`, lalu isi `baseUrl`, `appOrigin`, `adminUsername`, dan `adminPassword` dengan konfigurasi Herd dan akun development Anda. Jangan simpan password produksi di environment yang dibagikan. Collection menjalankan request berurutan: ambil CSRF → login → cek sesi → create supplier → uji validasi nama → logout. Cookie auth ditangani Cookie Jar; access/refresh token tidak disimpan ke variable.
+Cakupan mencakup role, method, CSRF mutasi, validasi, 404, pagination/filter/search, update, status, dan alokasi ID. Celah: test create bernama duplikasi hanya membuat satu supplier lalu memeriksa sequence; belum membuktikan response 409 atau rollback karena duplikasi.
 
-Request create berhasil menyimpan record di database. Jalankan hanya ke database development lokal yang datanya boleh berubah. Pengujian invalid name tidak mengubah database.
+Semua setup test supplier menjalankan TRUNCATE TABLE suppliers dengan FOREIGN_KEY_CHECKS dimatikan. Test create juga mengosongkan id_sequences. Gunakan database PHPUnit disposable yang terpisah dari database aplikasi/Postman; truncation dapat meninggalkan transaksi yatim dan mereset counter ID entitas lain.
 
-## Cakupan PHPUnit dan kekurangannya
+Test memanggil handler langsung, bukan HTTP penuh. Collection Postman melengkapi pemeriksaan sesi, cookie, Origin, CSRF, routing, dan role lewat server Herd.
 
-Test yang ada: `tests/supplier/CreateSupplierTest.php`. Maksud cakupannya meliputi CSRF, method, role, validasi, ID berurutan, normalisasi field, nilai NULL, dan duplikasi.
+## Pengujian dengan Postman
 
-Ada beberapa hal yang perlu diperbaiki sebelum test suite dapat dipercaya:
+Import:
 
-1. `tests/bootstrap.php` tidak memuat `api/supplier/create.php`; test memanggil `handleCreateSupplier()` sehingga kemungkinan gagal dengan undefined function. Tambahkan pemuatan file handler dalam bootstrap test atau require khusus dalam test, dengan urutan konstanta bootstrap yang benar.
-2. Test `test_duplikat_kolom_unik_mengembalikan_409_dan_rollback_sequence()` hanya membuat satu supplier lalu memeriksa sequence bernilai 1. Ia tidak membuat data duplikat, tidak memeriksa status 409, dan tidak menguji rollback sequence.
-3. Test mematikan `FOREIGN_KEY_CHECKS`, lalu `TRUNCATE suppliers` dan `TRUNCATE id_sequences`. Ini dapat meninggalkan relasi yatim di database test; jangan pernah jalankan ke database aplikasi. Gunakan database test disposable khusus.
-4. Test memanggil handler langsung dengan actor buatan. Itu menguji role di handler, tetapi tidak membuktikan jalur HTTP memanggil `authRequireEmployee()` dengan benar. Tambahkan pengujian HTTP/Postman untuk tanpa sesi, role kasir, CSRF/Origin salah, serta cookie.
-5. Belum tampak kasus JSON rusak, JSON bukan object, `Content-Type` salah, Origin hilang/tidak cocok, nilai tipe bukan string, email/telepon/alamat batas valid, kegagalan insert, rollback transaksi, dan konkurensi allocator.
+- postman/pos-apotek-auth-supplier.postman_collection.json
+- postman/pos-apotek-local.postman_environment.json
 
-## Catatan validasi, schema, dan risiko
+Pilih environment POS Apotek Local. Jika host Herd Anda https://pos_apotek.test, cukup isi adminUsername dan adminPassword; jika berbeda, sesuaikan juga baseUrl dan appOrigin. Request create menulis record permanen. Collection mengubah profil dan status, lalu mengaktifkan kembali supplier; data uji tetap ada karena delete tidak tersedia.
 
-- README skema/ERD yang ada mendeskripsikan `supplier_name` maksimal 70 karakter dan tidak menampilkan `supplier_email` atau `is_active`, sementara handler baru menerima nama sampai 100 karakter dan menginsert kolom `supplier_email` serta `is_active`. Cocokkan dengan `SHOW CREATE TABLE suppliers` pada database target sebelum menganggap endpoint siap; dump SQL yang cocok tidak ditemukan di folder project saat audit ini.
-- `supplierHandleDatabaseError()` memetakan semua SQLSTATE `23000` sebagai data supplier duplikat. SQLSTATE tersebut juga bisa berarti pelanggaran foreign key atau constraint lain, sehingga pesan `409` bisa keliru. Bedakan constraint duplikat yang memang dikenal.
-- Endpoint baru aman dari SQL injection melalui prepared statement dan ID tidak dipercaya dari client. Tetapi endpoint lama yang belum dilindungi masih dapat melewati batas akses selama file tetap dapat dirutekan web server.
-- Filter karakter alamat membantu menolak markup, tetapi output tetap perlu di-escape saat ditampilkan di HTML. Validasi input bukan pengganti output encoding.
-- Jangan pakai `delete_supplier.php` untuk uji. Ia menghapus produk; pengujian request itu berisiko menghapus data yang bukan supplier.
+Pengguna melaporkan run terakhir collection mendapatkan 50 pass, 0 failed, 0 error. Itu hasil uji HTTP Postman lokal, bukan hasil PHPUnit.
 
-Saya tidak mengubah file PHP dan tidak menjalankan PHPUnit atau request Postman pada database project.
+## Catatan skema dan risiko
+
+ERD lama masih berbeda dari kolom yang dipakai endpoint: source memakai supplier_email, supplier_tax_id, is_active, updated_at, dan nama sampai 100 karakter, sementara ERD yang ada belum menunjukkan semua kolom tersebut dan menampilkan supplier_name VARCHAR(70). Cocokkan dengan SHOW CREATE TABLE suppliers lalu selaraskan SQL/ERD.
+
+supplierHandleDatabaseError() memetakan semua SQLSTATE 23000 sebagai duplikasi supplier; pelanggaran constraint lain juga dapat dilaporkan keliru sebagai 409. Field opsional dengan tipe non-string saat ini dapat dinormalisasi menjadi NULL, bukan selalu ditolak. Detail mengembalikan supplier_tax_id kepada admin dan apoteker; pastikan itu memang sesuai kebutuhan akses.
+
+Collection belum menghapus employeeId/supplierId lama dari environment sebelum create. Kosongkan variable sebelum mengulang setelah create gagal agar request mutasi tidak memakai ID uji dari run terdahulu.

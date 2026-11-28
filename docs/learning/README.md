@@ -26,6 +26,14 @@ pos_apotek/
 
 Nama file menunjukkan sudah ada pondasi login, API produk/pemasok/penjualan, dan tampilan dashboard. Dokumen ini tidak menganggap setiap fitur sudah lengkap atau aman sebelum ditinjau. File `.env` dan folder `secrets` tidak diperiksa.
 
+## API suppliers
+
+Source supplier aktif berada di `api/suppliers/` (plural). Endpoint list, detail, create, update, dan status memerlukan sesi dan role `admin`/`apoteker`; mutasi memakai CSRF. Tidak tersedia endpoint delete.
+
+Test berada di `tests/suppliers/` dan mencakup kelima handler, tetapi test create yang bernama duplikasi belum benar-benar mengirim duplikat. Setup test mengosongkan tabel supplier; test create juga mengosongkan sequence. Gunakan hanya database test disposable. Pengujian HTTP memakai collection Postman di `postman/`; pengguna melaporkan 50 pass pada run terakhir.
+
+ERD supplier belum sepenuhnya cocok dengan kolom yang digunakan handler. Cocokkan dengan struktur database aktual sebelum menjadikan dokumen skema acuan.
+
 ## Teknologi
 
 | Bagian         | Pilihan                                           | Catatan                                                                                                                                                                                                                                                                                                                                                  |
@@ -83,7 +91,7 @@ Keputusan ini adalah panduan untuk menilai dan mengembangkan implementasi yang a
 | 2. Login dan otorisasi | Tinjau `auth/login-process.php`, `config/auth.php`, cara sesi/JWT saat ini, dan alur logout                                | Tentukan satu pola untuk web POS; pelajari hash sandi, rotasi sesi, CSRF, rate limit, role checks, serta pengelolaan kunci.      |
 | 3. API master produk   | Rapikan dan lengkapi API kategori, bentuk sediaan, satuan, produk, unit produk, dan harga                                  | Gunakan pola response, validasi, autentikasi dan otorisasi yang sama; pahami konversi unit dan snapshot harga.                   |
 | 4. Sales               | Tinjau endpoint `api/selling.php`; bangun alur keranjang, checkout, pembayaran tunai, riwayat, dan pembatalan terotorisasi | Terapkan transaksi atomik, FEFO, batch/kedaluwarsa, stok cukup, dan ledger. Data stok latihan harus terpisah dari data produksi. |
-| 5. Latihan mandiri     | Purchase, supplier, penerimaan, biaya tambahan, pembayaran supplier, master lain                                           | Gunakan pola yang dipelajari dari master produk dan sales; tulis alasan keputusan serta latihan lanjutan sendiri.                |
+| 5. Latihan mandiri     | Supplier, purchase, penerimaan, biaya tambahan, pembayaran supplier, master lain                                           | Supplier sudah memiliki endpoint list, detail, create, update, dan status. Lanjutkan dengan menyelaraskan test dan skema; gunakan pola autentikasi, validasi, transaksi, dan ID yang konsisten. |
 
 ## Cara menelusuri proses belajar
 

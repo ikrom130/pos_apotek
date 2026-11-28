@@ -1,66 +1,50 @@
-# API Employees dan pengujian Bruno
+# API Employees dan pengujian dengan Postman
 
-README ini menjelaskan implementasi API pegawai yang tersedia saat ini. PHP project tetap Anda yang tulis.
+README ini menjelaskan endpoint employees saat ini. Source PHP tetap Anda yang kembangkan.
 
-## Endpoint saat ini
+## Endpoint
 
-| Method | URL                                        | Hak akses | Tujuan                                                          |
-| ------ | ------------------------------------------ | --------- | --------------------------------------------------------------- |
-| GET    | `/api/employees/list.php?page=1&limit=20`  | Admin     | Daftar, pencarian, filter, pagination                           |
-| GET    | `/api/employees/detail.php?id=EMP-00001`   | Admin     | Detail satu pegawai                                             |
-| POST   | `/api/employees/create.php`                | Admin     | Membuat akun dan ID server-side                                 |
-| PUT    | `/api/employees/update.php?id=EMP-00001`   | Admin     | Mengubah profil pegawai                                         |
-| PATCH  | `/api/employees/status.php?id=EMP-00001`   | Admin     | Mengaktifkan/menonaktifkan dan mencabut sesi bila dinonaktifkan |
-| POST   | `/api/employees/password.php?id=EMP-00002` | Admin     | Mengganti sandi pegawai lain dan mencabut sesi target           |
+| Method | Endpoint | Akses | Tujuan |
+|---|---|---|---|
+| GET | /api/employees/list.php?page=1&limit=20 | Admin | Daftar, pencarian, filter, pagination |
+| GET | /api/employees/detail.php?id=EMP-00001 | Admin | Detail tanpa hash password |
+| POST | /api/employees/create.php | Admin | Membuat pegawai; ID dibuat server |
+| PUT | /api/employees/update.php?id=EMP-00001 | Admin | Mengubah profil |
+| PATCH | /api/employees/status.php?id=EMP-00001 | Admin | Mengaktifkan/nonaktifkan; nonaktif mencabut sesi |
+| POST | /api/employees/password.php?id=EMP-00002 | Admin | Mengganti password pegawai lain dan mencabut sesinya |
 
-Endpoint password saat ini adalah tindakan admin untuk target pegawai lain. Endpoint menolak admin mengganti sandi akunnya sendiri. Ia meminta `new_password`, bukan konfirmasi sandi pemilik akun. Tidak ada `reset_password.php` pada source saat ini. Jangan menyamakan endpoint ini dengan fitur self-service ganti sandi.
+Mutasi memerlukan sesi admin, Origin sesuai APP_ORIGIN, cookie CSRF, dan X-CSRF-Token yang sama dengan cookie. Role pegawai yang diterima di profil: admin, apoteker, kasir. Create menerima employee_name, employee_role, employee_phone, employee_username, employee_password; password awal 12–72 byte. ID tidak dikirim client dan dihasilkan melalui id_sequences di dalam transaksi.
 
-Semua perubahan memerlukan cookie sesi admin, CSRF cookie/header yang cocok, dan `Origin` persis `APP_ORIGIN`. Role yang diterima pada profil adalah `admin`, `apoteker`, atau `kasir`. Sandi create dan password minimal 12 dan maksimal 72 byte; akun dibuat aktif dan sandi disimpan sebagai hash. ID employee dialokasikan melalui `id_sequences` dalam transaksi.
+## Reset password oleh admin
 
-## Test PHPUnit endpoint create
+Endpoint password.php adalah reset oleh admin untuk pegawai lain, bukan self-service. Request body berisi new_password. Endpoint menolak admin mereset akun sendiri dan menolak target nonaktif; setelah berhasil, semua sesi target dicabut. Implementasi saat ini tidak memaksa pegawai mengganti password pada login berikutnya dan tidak menulis audit event khusus reset.
 
-`tests/employees/EmployeeCreateTest.php` mencakup CSRF tidak valid, method tidak sesuai, role bukan admin, validasi nama/role/telepon/username, panjang sandi, sukses menghasilkan ID berurutan, hash sandi tersimpan, username duplikat (`409`), dan rollback sequence.
+## Test PHPUnit
 
-Jalankan:
+- tests/employees/EmployeeListTest.php
+- tests/employees/EmployeeDetailTest.php
+- tests/employees/EmployeeCreateTest.php
+- tests/employees/EmployeeUpdateTest.php
+- tests/employees/EmployeeStatusTest.php
+- tests/employees/EmployeePasswordTest.php
 
-```powershell
-vendor\bin\phpunit.bat tests\employees\EmployeeCreateTest.php
-```
+Test create mencakup CSRF, method, role, validasi profil/password, hash, ID berurutan, username duplikat dan rollback sequence.
 
-Test mengosongkan tabel test. Pastikan `tests/bootstrap.php` menunjuk ke database test khusus, bukan database aplikasi.
+Jalankan test khusus dari PowerShell:
 
-## Membuat request create di Bruno
+    vendor\bin\phpunit.bat tests\employees
 
-Ikuti instalasi, pembuatan collection/environment, dan login admin pada [README login](../login/README.md). Setelah login, simpan CSRF terbaru dari response login ke `csrfToken`.
+Periksa tests/bootstrap.php dan phpunit.xml. Test memerlukan database test terpisah; beberapa setup melakukan truncation. Jangan arahkan PHPUnit ke database aplikasi/Postman atau produksi.
 
-Buat request:
+## Pengujian dengan Postman
 
-- Method: `POST`
-- URL: `{{baseUrl}}/api/employees/create.php`
-- Headers:
-  - `Content-Type: application/json`
-  - `Origin: {{appOrigin}}`
-  - `X-CSRF-Token: {{csrfToken}}`
-- Body → JSON:
+Import collection dan environment di folder postman/:
 
-  ```json
-  {
-    "employee_name": "Pegawai Uji Bruno",
-    "employee_role": "apoteker",
-    "employee_phone": "081234567890",
-    "employee_username": "pegawai.bruno.uji",
-    "employee_password": "LatihanBrunoAman123!"
-  }
-  ```
+- postman/pos-apotek-auth-supplier.postman_collection.json
+- postman/pos-apotek-local.postman_environment.json
 
-Cookie access admin dan CSRF harus terkirim otomatis dari Cookie Jar. Untuk hasil normal harapkan HTTP `201`, `status: success`, dan `employee_id` berformat `EMP-00001` (angka aktual mengikuti isi database).
+Pilih POS Apotek Local, isi adminUsername/adminPassword, lalu jalankan collection berurutan. Collection membuat satu pegawai kasir uji, mengganti profil/password/statusnya, login dengan akun tersebut untuk menguji penolakan akses kasir, lalu logout. Tidak ada endpoint delete sehingga pegawai uji tetap aktif di database.
 
-Uji validasi tambahan pada database lokal khusus:
+Sebelum mengulang collection, periksa employeeId/supplierId di environment. Jika create gagal pada run sebelumnya dan ID lama tersimpan, request selanjutnya berpotensi memakai ID lama. Collection membuat password uji dinamis dan menyimpannya ke environment aktif; tinjau nilai environment sebelum export/commit.
 
-1. Hilangkan `Origin` atau kirim CSRF yang salah: harapkan `403`.
-2. Ubah method menjadi GET: harapkan `405`.
-3. Login sebagai akun non-admin lalu kirim POST create: harapkan `403`.
-4. Kirim nama terlalu pendek, role yang tidak dikenal, username invalid, atau sandi di bawah 12 byte: harapkan `422`.
-5. Buat username yang sama dua kali: request kedua harapkan `409`.
-
-**Penting:** create menyimpan pegawai secara permanen dan endpoint delete belum ada. Gunakan database disposable/backup development dan username uji yang unik. Jangan jalankan pada data staging atau produksi. Bersihkan akun uji lewat DB hanya jika Anda sudah memastikan koneksi menunjuk database latihan yang benar.
+Gunakan database development khusus yang aman diubah. Jangan memakai akun atau data staging/produksi.

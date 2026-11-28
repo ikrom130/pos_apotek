@@ -1,144 +1,65 @@
-# Login dan pengujian auth dengan Bruno
+# Login dan pengujian auth dengan Postman
 
-Dokumen ini menjelaskan endpoint auth yang ada sekarang, cakupan PHPUnit, dan langkah menguji request HTTP dengan Bruno. Source PHP tetap Anda yang pelajari dan ubah.
+Dokumen ini mengikuti endpoint auth yang ada di project. Pengujian HTTP menggunakan collection Postman bersama employees dan suppliers, bukan Bruno.
 
 ## Endpoint auth
 
-| Method | URL                       | Fungsi                                              | Pemeriksaan utama                                                     |
-| ------ | ------------------------- | --------------------------------------------------- | --------------------------------------------------------------------- |
-| GET    | `/auth/csrf-token.php`    | Membuat token CSRF dan memasang cookie `csrf_token` | Method GET; cookie Secure dan SameSite Strict                         |
-| POST   | `/auth/login-process.php` | Memvalidasi kredensial dan membuat sesi             | CSRF, Origin, JSON, username/sandi, status aktif, rate limit          |
-| GET    | `/auth/me.php`            | Membaca pegawai dari sesi aktif                     | JWT access cookie, sesi aktif, batas idle dan absolut, status pegawai |
-| POST   | `/auth/refresh.php`       | Memutar refresh token dan menerbitkan access baru   | CSRF, refresh cookie, sesi, expiry, reuse detection                   |
-| POST   | `/auth/logout.php`        | Mencabut sesi dan membersihkan cookie               | CSRF; idempotent jika cookie sesi tidak ada                           |
+| Method | URL | Fungsi | Pemeriksaan |
+|---|---|---|---|
+| GET | /auth/csrf-token.php | Membuat token CSRF dan cookie csrf_token | GET, cookie Secure/SameSite |
+| POST | /auth/login-process.php | Memeriksa kredensial dan membuat sesi | CSRF, Origin, JSON, akun aktif, rate limit |
+| GET | /auth/me.php | Mengembalikan profil dari sesi aktif | Access cookie, JWT, sesi, masa berlaku, status pegawai |
+| POST | /auth/refresh.php | Merotasi refresh token dan menerbitkan access baru | CSRF, refresh cookie, sesi, masa berlaku, reuse |
+| POST | /auth/logout.php | Mencabut sesi dan membersihkan cookie | CSRF; logout idempotent |
 
-Semua token auth berada di cookie `HttpOnly` (CSRF cookie tidak `HttpOnly`). Jangan menyimpan access/refresh token di `localStorage` atau menyalinnya ke environment Bruno. Login dan refresh mengeluarkan token CSRF baru; perbarui nilai `csrfToken` dari JSON response sebelum request POST berikutnya.
+Access dan refresh token dikirim melalui cookie HttpOnly, Secure, SameSite=Strict. Cookie CSRF dapat dibaca klien untuk dikirim kembali di header X-CSRF-Token. Semua POST memerlukan Origin yang sama persis dengan APP_ORIGIN dan token CSRF header-cookie yang cocok.
 
-## PHPUnit yang tersedia
+## Alur autentikasi
 
-- `tests/auth/AuthLoginTest.php`
-- `tests/auth/AuthLogoutTest.php`
-- `tests/auth/AuthMeTest.php`
-- `tests/auth/AuthRefreshTest.php`
-- `tests/auth/AuthRequireEmployeeTest.php` menguji helper middleware, bukan endpoint HTTP.
-- `tests/IdSequenceTest.php`
-- `tests/employees/EmployeeCreateTest.php`
+1. GET csrf-token.php memperoleh token awal dan memasang cookie CSRF.
+2. POST login-process.php mengirim username/password, Origin, X-CSRF-Token, dan cookie CSRF.
+3. Jika login valid, server membuat sesi dan cookie access/refresh. Token CSRF ikut diperbarui di response JSON.
+4. GET me.php memeriksa sesi aktif.
+5. POST refresh.php menggunakan refresh cookie dan CSRF; token refresh serta CSRF diputar.
+6. POST logout.php mencabut sesi. Request me.php berikutnya harus mendapat 401.
 
-Belum ada PHPUnit khusus untuk `csrf-token.php`. PHPUnit memanggil fungsi handler PHP secara langsung, jadi Bruno melengkapi pengujian dengan HTTP request ke situs Herd.
+Jangan simpan access/refresh token di environment, localStorage, atau log. Postman Cookie Jar harus menyimpan cookie otomatis.
 
-Jalankan dari PowerShell di folder project:
+## PHPUnit
 
-```powershell
-vendor\bin\phpunit.bat
-```
+Test auth yang tersedia:
 
-**Peringatan database test:** bootstrap test mengosongkan beberapa tabel (`employees`, `auth_sessions`, `auth_refresh_tokens`, `auth_login_attempts`, dan sequence pada test allocator/create). Pastikan konfigurasi mengarah ke database khusus test. `tests/bootstrap.php` menetapkan koneksi sendiri; periksa isinya sebelum menjalankan dan jangan gunakan database development utama/produksi.
+- tests/auth/AuthLoginTest.php
+- tests/auth/AuthLogoutTest.php
+- tests/auth/AuthMeTest.php
+- tests/auth/AuthRefreshTest.php
+- tests/auth/AuthRequireEmployeeTest.php — menguji helper middleware, bukan request HTTP.
+- tests/IdSequenceTest.php
 
-## Instal atau buka Bruno di Windows
+Belum ada test PHPUnit khusus csrf-token.php. PHPUnit memanggil handler secara langsung; Postman melengkapi uji HTTP untuk cookie, Origin, routing, dan HTTPS.
 
-1. Cek Start Menu Windows dengan mengetik `Bruno`. Jika aplikasi sudah ada, buka aplikasi tersebut.
-2. Jika belum terpasang, unduh installer Windows x64 dari [halaman download resmi Bruno](https://www.usebruno.com/downloads). Pilih Windows x64; gunakan Arm64 hanya jika perangkat Windows Anda berbasis ARM.
-3. Alternatif lewat Windows Package Manager dari PowerShell:
+Jalankan seluruh test dari PowerShell project:
 
-   ```powershell
-   winget install bruno.bruno
-   ```
+    vendor\bin\phpunit.bat
 
-4. Setelah instalasi selesai, buka Bruno dari Start Menu.
-5. Pilih untuk membuat collection baru. Beri nama `POS Apotek Local`. Simpan collection di luar repository bila belum ingin menambahkan file Bruno ke Git.
-6. Buat environment `Local` dengan variabel:
+Sebelum menjalankan, periksa tests/bootstrap.php dan phpunit.xml. Bootstrap memakai database test yang ditetapkan langsung dan test dapat mengosongkan tabel pegawai, sesi, refresh token, login attempts, serta sequence. Jangan arahkan ke database aplikasi/Postman atau database produksi.
 
-   | Nama            | Nilai                                                                  |
-   | --------------- | ---------------------------------------------------------------------- |
-   | `baseUrl`       | `https://<domain-Herd-lokal>` tanpa slash akhir                        |
-   | `appOrigin`     | origin persis dari `APP_ORIGIN`, tanpa slash akhir                     |
-   | `adminUsername` | username admin development                                             |
-   | `adminPassword` | sandi admin development, tandai secret/private bila fitur itu tersedia |
-   | `csrfToken`     | kosong pada awalnya; isi manual dari response CSRF terbaru             |
+## Pengujian dengan Postman
 
-   Jangan gunakan `http://` karena cookie auth disetel `Secure`. Pastikan sertifikat HTTPS Herd dipercaya Windows dan `baseUrl` membuka aplikasi di browser.
+Import file project berikut:
 
-7. Pastikan Cookie Jar Bruno aktif. Request berikutnya ke host yang sama harus menyimpan cookie `csrf_token`, `access_token`, dan `refresh_token` dari response. Token access/refresh bersifat HttpOnly di server; gunakan cookie jar, bukan header Authorization manual.
+- postman/pos-apotek-auth-supplier.postman_collection.json
+- postman/pos-apotek-local.postman_environment.json
 
-## Membuat dan mengirim request
+Pilih environment POS Apotek Local. Nilai baseUrl dan appOrigin default ke https://pos_apotek.test; sesuaikan keduanya jika domain Herd Anda berbeda. Isi adminUsername dan adminPassword dengan akun development. Credential tidak dicantumkan dalam file template.
 
-Untuk setiap request, pilih method dan URL berikut. Pada tab Headers/Body Bruno, masukkan nilai yang ditampilkan.
+Jalankan collection secara berurutan agar CSRF, login, refresh, cookie, dan logout bekerja sesuai alur. Collection mencakup auth, employees, dan suppliers; pengujian auth tidak dipisah menjadi collection kedua. Jangan menjalankan collection ke database yang datanya harus dipertahankan.
 
-### 1. Ambil CSRF awal
+Pengguna melaporkan hasil run lokal terakhir: 50 pass, 0 failed, 0 error. Itu hasil Postman, bukan hasil PHPUnit.
 
-- Method: `GET`
-- URL: `{{baseUrl}}/auth/csrf-token.php`
-- Tidak memerlukan body atau header CSRF.
-- Kirim request; harapkan HTTP `200` dan JSON berisi `csrf_token`.
-- Pastikan Cookie Jar menyimpan cookie `csrf_token` untuk host lokal.
-- Salin nilai JSON `csrf_token` ke environment `csrfToken`.
+## Jika request gagal
 
-### 2. Login sebagai admin
-
-- Method: `POST`
-- URL: `{{baseUrl}}/auth/login-process.php`
-- Headers:
-  - `Content-Type: application/json`
-  - `Origin: {{appOrigin}}`
-  - `X-CSRF-Token: {{csrfToken}}`
-- Body → JSON:
-
-  ```json
-  {
-    "username": "{{adminUsername}}",
-    "password": "{{adminPassword}}"
-  }
-  ```
-
-- Bruno mengirim cookie CSRF dari Cookie Jar. Harapkan HTTP `200`, `status: success`, objek `employee`, dan cookie auth baru.
-- Ganti environment `csrfToken` dengan `csrf_token` dari response login. Login merotasi token CSRF.
-
-### 3. Periksa sesi
-
-- Method: `GET`
-- URL: `{{baseUrl}}/auth/me.php`
-- Body/header tambahan tidak diperlukan.
-- Cookie Jar harus mengirim `access_token` otomatis.
-- Harapkan HTTP `200` dan profil admin.
-
-### 4. Refresh sesi
-
-- Method: `POST`
-- URL: `{{baseUrl}}/auth/refresh.php`
-- Headers: `Origin: {{appOrigin}}` dan `X-CSRF-Token: {{csrfToken}}`.
-- Body kosong.
-- Cookie Jar mengirim `refresh_token` dan `csrf_token`.
-- Harapkan HTTP `200`; refresh cookie dirotasi. Perbarui environment `csrfToken` dari JSON response.
-
-### 5. Periksa access token setelah refresh
-
-Ulangi request `GET {{baseUrl}}/auth/me.php`. Harapkan `200`. Ini memastikan cookie access yang baru diterbitkan digunakan.
-
-### 6. Logout
-
-- Method: `POST`
-- URL: `{{baseUrl}}/auth/logout.php`
-- Headers: `Origin: {{appOrigin}}` dan `X-CSRF-Token: {{csrfToken}}`.
-- Body kosong.
-- Harapkan HTTP `200` dan response sukses. Cookie sesi dibersihkan.
-
-### 7. Pastikan sesi sudah ditolak
-
-Ulangi `GET {{baseUrl}}/auth/me.php`. Harapkan HTTP `401`. Bila Bruno masih mengirim cookie lama, periksa Cookie Jar dan hapus cookie host tersebut, lalu pastikan request logout memang menerima Origin/CSRF yang benar.
-
-## Kasus validasi tambahan
-
-Jalankan pada database development terpisah:
-
-- Login dengan sandi salah: harapkan `401` dengan pesan generik.
-- Login body tidak valid (contoh username di bawah 3 karakter): harapkan `422`.
-- POST tanpa `Origin` tepat atau token CSRF cocok: harapkan `403`.
-- GET ke endpoint POST: harapkan `405`.
-- Enam login gagal dengan username uji yang sama dalam 15 menit: percobaan berikutnya dapat menerima `429`. Hindari ini pada akun admin penting karena rate limit juga dapat memblokir login benar untuk kombinasi tersebut.
-
-Jika muncul `403`, periksa ketiga hal ini sekaligus: origin persis sama dengan `APP_ORIGIN`, cookie CSRF tersimpan, dan nilai header cocok dengan cookie terbaru. Jika muncul `401`, cek akun aktif dan cookie access/refresh.
-
-## Referensi Bruno
-
-- [Download resmi Bruno](https://www.usebruno.com/downloads)
-- [Dokumentasi Bruno](https://docs.usebruno.com/)
+- 403: periksa Origin, cookie csrf_token, dan X-CSRF-Token; ketiganya harus sesuai konfigurasi/origin dan token terbaru.
+- 401: periksa akun aktif dan cookie sesi. Setelah logout, me.php seharusnya 401.
+- 429: rate limit login tercapai. Hindari mencoba berulang kali pada akun penting.
+- Jangan ekspor environment setelah run tanpa meninjau nilainya. Script collection mengisi variable akun uji saat berjalan.
