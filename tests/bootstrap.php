@@ -69,3 +69,4 @@ require_once dirname(__DIR__) . '/api/suppliers/create.php';
 require_once dirname(__DIR__) . '/api/suppliers/list.php';
 require_once dirname(__DIR__) . '/api/suppliers/detail.php';
 require_once dirname(__DIR__) . '/api/suppliers/update.php';
+require_once dirname(__DIR__) . '/api/suppliers/status.php';
